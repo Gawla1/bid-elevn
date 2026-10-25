@@ -805,12 +805,13 @@ function openAuth(){
  if(AU)return openAcct();
  if(!AUTH)return toast('Sign-in could not load (firebase-auth script blocked or offline)');
  let mode='in';const o=modal('');
- const R=()=>{const up=mode=='up';o.firstChild.innerHTML=`<h3 style="margin:0">${up?'Create account':'Sign in'}</h3><p class="note" style="margin:6px 0 0">Save your progress and play on any device.</p><div class="aui"><button class="btn p" id="ag">Continue with Google</button><div class="aor">or use email</div><input id="ae" type="email" placeholder="Email" autocomplete="email"><input id="ap" type="password" placeholder="Password (6+ characters)" autocomplete="${up?'new-password':'current-password'}"><div class="er" id="aer"></div><button class="btn p" id="ago">${up?'Create account':'Sign in'}</button>${up?'':'<a id="afp">Forgot password?</a>'}<a id="asw">${up?'Already have an account? Sign in':'New here? Create an account'}</a><button class="btn s" id="ax">Maybe later</button></div>`;
+ const R=()=>{const up=mode=='up';o.firstChild.innerHTML=`<h3 style="margin:0">${up?'Create account':'Sign in'}</h3><p class="note" style="margin:6px 0 0">Save your progress and play on any device.</p><div class="aui"><button class="btn p" id="ag">Continue with Google</button><div class="aor">or use email</div>${up?'<input id="an" maxlength="16" placeholder="Player name" autocomplete="nickname">':''}<input id="ae" type="email" placeholder="Email" autocomplete="email"><input id="ap" type="password" placeholder="Password (6+ characters)" autocomplete="${up?'new-password':'current-password'}"><div class="er" id="aer"></div><button class="btn p" id="ago">${up?'Create account':'Sign in'}</button>${up?'':'<a id="afp">Forgot password?</a>'}<a id="asw">${up?'Already have an account? Sign in':'New here? Create an account'}</a><button class="btn s" id="ax">Maybe later</button></div>`;
   const err=m=>$('#aer',o).textContent=m,busy=b=>$$('button',o).forEach(x=>x.disabled=b);
   $('#ax',o).onclick=()=>o.remove();
   $('#asw',o).onclick=()=>{mode=up?'in':'up';R()};
   $('#ago',o).onclick=async()=>{const e=$('#ae',o).value.trim(),p=$('#ap',o).value;if(!e||!p)return err('Enter your email and password');busy(true);err('');
-   try{up?await AUTH.createUserWithEmailAndPassword(e,p):await AUTH.signInWithEmailAndPassword(e,p);o.remove();toast('Signed in ✅')}catch(x){err(em(x));busy(false)}};
+   const nm=up?frClean($('#an',o).value).trim().slice(0,16):'';if(up&&nm.length<2){busy(false);return err('Choose a player name (2+ characters)')}
+   try{if(up){const cr=await AUTH.createUserWithEmailAndPassword(e,p);S.x.nick=nm;save();try{await cr.user.updateProfile({displayName:nm})}catch{}}else await AUTH.signInWithEmailAndPassword(e,p);o.remove();toast('Signed in ✅')}catch(x){err(em(x));busy(false)}};
   const fp=$('#afp',o);if(fp)fp.onclick=async()=>{const e=$('#ae',o).value.trim();if(!e)return err('Type your email first');try{await AUTH.sendPasswordResetEmail(e);err('');toast('Reset link sent to '+e)}catch(x){err(em(x))}};
   $('#ag',o).onclick=async()=>{busy(true);err('');const gp=new firebase.auth.GoogleAuthProvider();
    try{await AUTH.signInWithPopup(gp);o.remove();toast('Signed in ✅')}catch(x){if(x.code=='auth/popup-blocked'||x.code=='auth/operation-not-supported-in-this-environment'){AUTH.signInWithRedirect(gp);return}err(em(x));busy(false)}};
@@ -825,9 +826,14 @@ function openAcct(){
   localStorage.removeItem(KEY);location.hash='#/home';location.reload()};
 }
 {const _f=V.profile;V.profile=()=>{_f();
- const row=`<div class="row" style="margin-top:8px;gap:8px"><button class="btn ${AU?'s':'p'}" id="acb">${AU?'☁️ Account':'🔐 Sign in to save progress'}</button></div>`,d=$('.pp>div',app);
+ const row=`<div class="row" style="margin-top:8px;gap:8px"><button class="btn ${AU?'s':'p'}" id="acb">${AU?'☁️ Account':'🔐 Sign in to save progress'}</button><button class="btn s" id="enb">✏️ Edit name</button></div>`,d=$('.pp>div:last-child',app);
  if(d)d.insertAdjacentHTML('beforeend',row);else $('h2',app).insertAdjacentHTML('afterend',row);
- $('#acb').onclick=openAuth}}
+ $('#acb').onclick=openAuth;
+ $('#enb').onclick=()=>{const o=modal(`<h3 style="margin:0">Your name</h3><p class="note" style="margin:6px 0 0">This is the name other players see.</p><div class="aui"><input id="enm" maxlength="16" placeholder="Player name" value="${String(S.x.nick||'').replace(/"/g,'')}"><div class="er" id="eer"></div><button class="btn p" id="ens">Save</button><button class="btn s" id="enx">Cancel</button></div>`),i=$('#enm',o);
+  $('#enx',o).onclick=()=>o.remove();
+  $('#ens',o).onclick=()=>{const v=frClean(i.value).trim().slice(0,16);if(v.length<2)return $('#eer',o).textContent='Name must be at least 2 characters';
+   S.x.nick=v;save();o.remove();toast('Name updated ✅');V.profile()};
+  i.onkeydown=e=>{if(e.key=='Enter')$('#ens',o).click()};setTimeout(()=>i.focus(),50)}}}
 $('#cld').onclick=openAuth;
 if(AUTH)AUTH.onAuthStateChanged(onUser);else cloudUI('off');
 }
