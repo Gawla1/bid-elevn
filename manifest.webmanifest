@@ -1,0 +1,16 @@
+{
+  "name": "Bid Eleven – Football Player Auction",
+  "short_name": "Bid Eleven",
+  "description": "Out-bid your rivals. Build the strongest eleven.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#050b09",
+  "theme_color": "#0a0f0a",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

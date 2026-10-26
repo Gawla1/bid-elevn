@@ -4,6 +4,11 @@
 <meta property="og:title" content="Bid Eleven">
 <meta property="og:description" content="Out-bid your rivals. Build the strongest eleven.">
 <meta name="theme-color" content="#0a0f0a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bid Eleven">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Bid Eleven – Football Player Auction</title>
@@ -909,4 +914,6 @@ V.stats=()=>{
 if(location.hash=='#/stats')route();
 }
 
+/* PWA: service worker makes the game installable */
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script></body></html>
