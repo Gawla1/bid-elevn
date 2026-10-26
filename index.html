@@ -1,5 +1,10 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
+<html lang="en"><head>
+<meta name="description" content="Bid Eleven: out-bid your rivals and build the strongest eleven in this football player auction game.">
+<meta property="og:title" content="Bid Eleven">
+<meta property="og:description" content="Out-bid your rivals. Build the strongest eleven.">
+<meta name="theme-color" content="#0a0f0a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Bid Eleven – Football Player Auction</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -133,7 +138,7 @@ main{max-width:1100px;margin:auto;padding:18px 16px 60px}
 .br i{height:10px;border-radius:6px;background:var(--c);width:var(--w);opacity:.55;animation:gw 1s both;transform-origin:left}.br i.top{opacity:1;box-shadow:0 0 12px var(--c)}@keyframes gw{from{width:0}}
 .why li{list-style:none;margin:4px 0}.why li::before{content:'✓ ';color:var(--g);font-weight:700}
 /* shop / pack */
-.packs{display:grid;gap:18px}@media(min-width:800px){.packs{grid-template-columns:repeat(3,1fr)}}
+.packs{display:grid;gap:18px}@media(min-width:800px){.packs{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}}
 .pkc{padding:18px;text-align:center;display:grid;gap:10px;justify-items:center}
 .pk{--c:#3fb4ff;width:120px;height:170px;border-radius:12px;position:relative;display:grid;place-items:center;text-align:center;background:linear-gradient(150deg,var(--c),#0a1a14 70%),#000;border:2px solid var(--c);box-shadow:0 0 30px var(--c);font:900 22px var(--D);padding:8px;clip-path:polygon(0 6%,10% 0,20% 6%,30% 0,40% 6%,50% 0,60% 6%,70% 0,80% 6%,90% 0,100% 6%,100% 100%,0 100%)}
 .pk.big{width:180px;height:250px;font-size:30px}.pk.shake{animation:shake .12s infinite}.pk.glow{box-shadow:0 0 120px 40px var(--c);filter:brightness(2)}
@@ -208,9 +213,17 @@ document.addEventListener('pointerout',e=>{const c=e.target.closest&&e.target.cl
 const KEY='bidEleven.v3';
 const def=()=>({coins:400,owned:Object.keys(PROF).flatMap(po=>PL.filter(p=>p.pos==po&&p.id<=100).sort((a,b)=>a.rating-b.rating).slice(0,po=='CB'?3:2)).map(p=>p.id),squad:{f:'4-3-3',slots:Array(11).fill(null)},st:{w:0,l:0,streak:0,best:0,earned:0,spent:0,packs:0,bestSq:0},hist:[],set:{sound:true}});
 let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch{}S=Object.assign(def(),S||{});var LOCAL_TS=S.ts||0;
-const save=()=>{try{S.ts=Date.now();localStorage.setItem(KEY,JSON.stringify(S))}catch{}typeof cloudPush=='function'&&cloudPush()};
+const _h=t=>{let a=0xdeadbeef,b=0x41c6ce57;for(let i=0;i<t.length;i++){const c=t.charCodeAt(i);a=Math.imul(a^c,2654435761);b=Math.imul(b^c,1597334677)}a=Math.imul(a^a>>>16,2246822507)^Math.imul(b^b>>>13,3266489909);b=Math.imul(b^b>>>16,2246822507)^Math.imul(a^a>>>13,3266489909);return(4294967296*(2097151&b)+(a>>>0)).toString(36)},
+_sg=()=>_h('be11|'+S.coins+'|'+S.owned.join(',')+'|'+S.st.earned+'|'+S.st.spent+'|'+S.st.w+'|'+S.st.l+'|k7q');
+const save=()=>{try{S.ts=Date.now();S.sig=_sg();localStorage.setItem(KEY,JSON.stringify(S))}catch{}typeof cloudPush=='function'&&cloudPush()};
 Sfx.on=S.set.sound;
 S.x=Object.assign({dayClaim:'',dStreak:0,missions:{day:'',list:[]},ach:{},cup:null,cupWins:0,sold:0,deal:''},S.x||{});
+/* ---- save validation: reject edited / impossible saves, sanitize text ---- */
+(()=>{const ok=Number.isFinite(S.coins)&&S.coins>=0&&S.coins<=1e7&&Array.isArray(S.owned)&&S.owned.length<=PL.length&&S.owned.every(i=>Number.isInteger(i)&&PL[i-1])&&new Set(S.owned).size==S.owned.length&&S.st&&typeof S.st=='object';
+ if(!ok||(S.sig&&S.sig!==_sg())){const d=def();S.coins=d.coins;S.owned=d.owned;S.st=d.st;S.squad=d.squad;S.hist=[];S.x.cup=null;S.x.tamper=(S.x.tamper||0)+1;setTimeout(()=>{try{toast('Save data looked modified, progress was reset')}catch{}},1500)}
+ const n=String(S.x.nick==null?'':S.x.nick).replace(/[^\p{L}\p{N} _.\-]/gu,'').trim().slice(0,12);if(n)S.x.nick=n;else delete S.x.nick;
+ if(S.x.photo&&!/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(S.x.photo))delete S.x.photo;
+ if(!Number.isInteger(S.x.av))delete S.x.av})();
 /* ============ formations & team evaluation ============ */
 const FM={'4-3-3':[['LW','ST','RW'],['CM','CM','CM'],['LB','CB','CB','RB']],'4-4-2':[['ST','ST'],['LM','CM','CM','RM'],['LB','CB','CB','RB']],'4-2-3-1':[['ST'],['LW','CAM','RW'],['CDM','CDM'],['LB','CB','CB','RB']],'3-4-3':[['LW','ST','RW'],['LM','CM','CM','RM'],['CB','CB','CB']],'3-5-2':[['ST','ST'],['LM','CM','CAM','CM','RM'],['CB','CB','CB']]};
 const LINE={GK:0,LB:1,CB:1,RB:1,CDM:2,CM:2,CAM:2,LM:2,RM:2,LW:3,RW:3,ST:3},NEAR={LM:'LW',LW:'LM',RM:'RW',RW:'RM',CDM:'CM',CM:'CDM',CAM:'CM'},SLC={};
@@ -335,7 +348,7 @@ V.results=()=>{if(!LAST){location.hash='#/play';return}const L=LAST,T=L.teams,w=
   <div class="chips">${T.map(x=>`<button class="chip ${x.i==sel?'on':''}" data-s="${x.i}">${x.i==0?'You':x.p.name}</button>`).join('')}</div>
   <div class="sg" style="margin-top:14px"><div id="ap" class="pitch"></div><aside class="gl pn"><h3>${t.i==0?'Your':t.p.name+"'s"} lineup · ${t.f}</h3><p><b>Strongest:</b> ${fmt(ps[0])}</p><p><b>Weakest:</b> ${fmt(ps[ps.length-1])}</p><p class="note">Overall ${t.ev.overall}. Players out of position are rated lower, and empty slots count as 35.</p></aside></div>`;drawPitch($('#ap'),t.f,t.arr,{})};
  R();app.onclick=e=>{const c=e.target.closest('[data-t]');if(c){$$('.tabs .chip').forEach(x=>x.classList.toggle('on',x==c));c.dataset.t=='r'?R():A()}const s=e.target.closest('[data-s]');if(s)A(+s.dataset.s)}};
-const PACKS=[{n:'Basic Pack',price:100,k:3,col:'#3fb4ff',odds:{Common:70,Rare:24,Epic:5,Legendary:1}},{n:'Premium Pack',price:500,k:5,col:'#b86bff',odds:{Common:25,Rare:45,Epic:25,Legendary:4,Icon:1}},{n:'Legendary Pack',price:1000,k:5,col:'#ffc83d',odds:{Common:0,Rare:30,Epic:45,Legendary:22,Icon:3}}];
+const PACKS=[{n:'Basic Pack',price:100,k:3,col:'#3fb4ff',odds:{Common:70,Rare:24,Epic:5,Legendary:1}},{n:'Silver Pack',price:250,k:4,col:'#c9d6e2',odds:{Common:48,Rare:38,Epic:12,Legendary:2}},{n:'Premium Pack',price:500,k:5,col:'#b86bff',odds:{Common:25,Rare:45,Epic:25,Legendary:4,Icon:1}},{n:'Elite Pack',price:750,k:5,col:'#ff6b4a',odds:{Common:8,Rare:42,Epic:37,Legendary:11,Icon:2}},{n:'Legendary Pack',price:1000,k:5,col:'#ffc83d',odds:{Common:0,Rare:30,Epic:45,Legendary:22,Icon:3}}];
 function roll(pk){let r=rnd(100),rar='Common';for(const k in pk.odds){if(r<pk.odds[k]){rar=k;break}r-=pk.odds[k]}let p=pick(PL.filter(x=>x.rarity==rar));if(S.owned.includes(p.id)&&Math.random()<.5)p=pick(PL.filter(x=>x.rarity==rar));return p}
 V.shop=()=>{app.innerHTML=`<h2>Shop <small>Global coins: 🪙 ${S.coins}</small></h2><div class="packs">${PACKS.map((p,i)=>`<div class="pkc gl"><div class="pk" style="--c:${p.col}">${p.n.split(' ')[0]}<br>PACK</div><h3>${p.n}</h3><div>${p.k} players</div><div class="odds">${Object.entries(p.odds).filter(o=>o[1]).map(o=>o[0]+' '+o[1]+'%').join(' · ')}</div><div class="price">🪙 ${p.price}</div><button class="btn p" data-p="${i}" ${S.coins<p.price?'disabled':''}>Select</button></div>`).join('')}</div><p class="note">Duplicates convert to coins. New players go straight to your Collection.</p>`;
  app.onclick=e=>{const b=e.target.closest('[data-p]');if(b){Sfx.play('click');openPack(PACKS[+b.dataset.p])}}};
@@ -795,7 +808,7 @@ async function onUser(u){
   const c=(await ref.once('value')).val(),foreign=S.x.uid&&S.x.uid!==u.uid;
   if(c&&(foreign||c.ts>LOCAL_TS)){localStorage.setItem(KEY,c.data);location.reload();return}
   if(foreign){localStorage.removeItem(KEY);location.reload();return}
-  if(!S.x.nick&&u.displayName)S.x.nick=String(u.displayName).slice(0,16);
+  if(!S.x.nick&&u.displayName)S.x.nick=frClean(u.displayName);
   S.x.uid=u.uid;save();cloudUI('ok');
  }catch{cloudUI('off')}
  if(location.hash=='#/profile')V.profile();
@@ -805,12 +818,12 @@ function openAuth(){
  if(AU)return openAcct();
  if(!AUTH)return toast('Sign-in could not load (firebase-auth script blocked or offline)');
  let mode='in';const o=modal('');
- const R=()=>{const up=mode=='up';o.firstChild.innerHTML=`<h3 style="margin:0">${up?'Create account':'Sign in'}</h3><p class="note" style="margin:6px 0 0">Save your progress and play on any device.</p><div class="aui"><button class="btn p" id="ag">Continue with Google</button><div class="aor">or use email</div>${up?'<input id="an" maxlength="16" placeholder="Player name" autocomplete="nickname">':''}<input id="ae" type="email" placeholder="Email" autocomplete="email"><input id="ap" type="password" placeholder="Password (6+ characters)" autocomplete="${up?'new-password':'current-password'}"><div class="er" id="aer"></div><button class="btn p" id="ago">${up?'Create account':'Sign in'}</button>${up?'':'<a id="afp">Forgot password?</a>'}<a id="asw">${up?'Already have an account? Sign in':'New here? Create an account'}</a><button class="btn s" id="ax">Maybe later</button></div>`;
+ const R=()=>{const up=mode=='up';o.firstChild.innerHTML=`<h3 style="margin:0">${up?'Create account':'Sign in'}</h3><p class="note" style="margin:6px 0 0">Save your progress and play on any device.</p><div class="aui"><button class="btn p" id="ag">Continue with Google</button><div class="aor">or use email</div>${up?'<input id="an" maxlength="12" placeholder="Player name" autocomplete="nickname">':''}<input id="ae" type="email" placeholder="Email" autocomplete="email"><input id="ap" type="password" placeholder="Password (6+ characters)" autocomplete="${up?'new-password':'current-password'}"><div class="er" id="aer"></div><button class="btn p" id="ago">${up?'Create account':'Sign in'}</button>${up?'':'<a id="afp">Forgot password?</a>'}<a id="asw">${up?'Already have an account? Sign in':'New here? Create an account'}</a><button class="btn s" id="ax">Maybe later</button></div>`;
   const err=m=>$('#aer',o).textContent=m,busy=b=>$$('button',o).forEach(x=>x.disabled=b);
   $('#ax',o).onclick=()=>o.remove();
   $('#asw',o).onclick=()=>{mode=up?'in':'up';R()};
   $('#ago',o).onclick=async()=>{const e=$('#ae',o).value.trim(),p=$('#ap',o).value;if(!e||!p)return err('Enter your email and password');busy(true);err('');
-   const nm=up?frClean($('#an',o).value).trim().slice(0,16):'';if(up&&nm.length<2){busy(false);return err('Choose a player name (2+ characters)')}
+   const nm=up?frClean($('#an',o).value).trim().slice(0,12):'';if(up&&nm.length<2){busy(false);return err('Choose a player name (2+ characters)')}
    try{if(up){const cr=await AUTH.createUserWithEmailAndPassword(e,p);S.x.nick=nm;save();try{await cr.user.updateProfile({displayName:nm})}catch{}}else await AUTH.signInWithEmailAndPassword(e,p);o.remove();toast('Signed in ✅')}catch(x){err(em(x));busy(false)}};
   const fp=$('#afp',o);if(fp)fp.onclick=async()=>{const e=$('#ae',o).value.trim();if(!e)return err('Type your email first');try{await AUTH.sendPasswordResetEmail(e);err('');toast('Reset link sent to '+e)}catch(x){err(em(x))}};
   $('#ag',o).onclick=async()=>{busy(true);err('');const gp=new firebase.auth.GoogleAuthProvider();
@@ -829,13 +842,71 @@ function openAcct(){
  const row=`<div class="row" style="margin-top:8px;gap:8px"><button class="btn ${AU?'s':'p'}" id="acb">${AU?'☁️ Account':'🔐 Sign in to save progress'}</button><button class="btn s" id="enb">✏️ Edit name</button></div>`,d=$('.pp>div:last-child',app);
  if(d)d.insertAdjacentHTML('beforeend',row);else $('h2',app).insertAdjacentHTML('afterend',row);
  $('#acb').onclick=openAuth;
- $('#enb').onclick=()=>{const o=modal(`<h3 style="margin:0">Your name</h3><p class="note" style="margin:6px 0 0">This is the name other players see.</p><div class="aui"><input id="enm" maxlength="16" placeholder="Player name" value="${String(S.x.nick||'').replace(/"/g,'')}"><div class="er" id="eer"></div><button class="btn p" id="ens">Save</button><button class="btn s" id="enx">Cancel</button></div>`),i=$('#enm',o);
+ $('#enb').onclick=()=>{const o=modal(`<h3 style="margin:0">Your name</h3><p class="note" style="margin:6px 0 0">This is the name other players see.</p><div class="aui"><input id="enm" maxlength="12" placeholder="Player name" value="${String(S.x.nick||'').replace(/"/g,'')}"><div class="er" id="eer"></div><button class="btn p" id="ens">Save</button><button class="btn s" id="enx">Cancel</button></div>`),i=$('#enm',o);
   $('#enx',o).onclick=()=>o.remove();
-  $('#ens',o).onclick=()=>{const v=frClean(i.value).trim().slice(0,16);if(v.length<2)return $('#eer',o).textContent='Name must be at least 2 characters';
+  $('#ens',o).onclick=()=>{const v=frClean(i.value).trim().slice(0,12);if(v.length<2)return $('#eer',o).textContent='Name must be at least 2 characters';
    S.x.nick=v;save();o.remove();toast('Name updated ✅');V.profile()};
   i.onkeydown=e=>{if(e.key=='Enter')$('#ens',o).click()};setTimeout(()=>i.focus(),50)}}}
 $('#cld').onclick=openAuth;
 if(AUTH)AUTH.onAuthStateChanged(onUser);else cloudUI('off');
+}
+
+/* ============ stadium background + background music (original, generated in the browser) ============ */
+{
+const pitch="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 700' preserveAspectRatio='xMidYMid slice'%3E%3Cg fill='none' stroke='white' stroke-opacity='.13' stroke-width='2'%3E%3Crect x='24' y='24' width='352' height='652'/%3E%3Cpath d='M24 350H376'/%3E%3Ccircle cx='200' cy='350' r='58'/%3E%3Crect x='100' y='24' width='200' height='96'/%3E%3Crect x='150' y='24' width='100' height='38'/%3E%3Crect x='100' y='580' width='200' height='96'/%3E%3Crect x='150' y='638' width='100' height='38'/%3E%3Cpath d='M150 120a58 58 0 0 0 100 0M150 580a58 58 0 0 1 100 0'/%3E%3C/g%3E%3Ccircle cx='200' cy='350' r='4' fill='white' fill-opacity='.1'/%3E%3C/svg%3E";
+document.head.insertAdjacentHTML('beforeend',`<style>body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(90% 55% at 50% -8%,#1f7a4a55,transparent 62%),radial-gradient(45% 35% at 10% 0,#ffffff14,transparent),radial-gradient(45% 35% at 90% 0,#ffffff14,transparent),radial-gradient(120% 90% at 50% 120%,#0b3d2540,transparent 60%),url("${pitch}") center/cover no-repeat}body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,#00000066 100%)}@media(max-width:520px){header{gap:5px;padding:10px 8px}header .ic{width:32px;height:32px;flex:none;font-size:15px;padding:0}header .cbx{padding:4px 8px;font-size:17px}header .lg0{font-size:21px;margin-right:auto;white-space:nowrap}}@media(max-width:380px){header{gap:3px;padding:10px 6px}header .lg0{font-size:18px}header .cbx{font-size:15px;padding:4px 7px}}</style>`);
+/* music: generated live with WebAudio, so there is nothing to license. Drop a file called music.mp3 next to index.html to use your own track instead. */
+const M2={on:S.set.music!==false,started:false,t:0,step:0,el:null,mode:null};
+const CH=[[57,60,64],[53,57,60],[48,52,55],[55,59,62]],BS=[45,41,36,43],mf=n=>440*Math.pow(2,(n-69)/12);
+const ac=()=>Sfx.ctx||(Sfx.ctx=new (window.AudioContext||window.webkitAudioContext)());
+let mg=null,nb=null;
+function env(c,t,g,a,d,out,f,type,fe){const o=c.createOscillator(),v=c.createGain();o.type=type||'sine';o.frequency.setValueAtTime(f,t);if(fe)o.frequency.exponentialRampToValueAtTime(fe,t+d);v.gain.setValueAtTime(.0001,t);v.gain.exponentialRampToValueAtTime(g,t+a);v.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(v);v.connect(out);o.start(t);o.stop(t+d+.05)}
+function hat(c,t,out,g){if(!nb){nb=c.createBuffer(1,c.sampleRate*.1,c.sampleRate);const d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}const s=c.createBufferSource(),f=c.createBiquadFilter(),v=c.createGain();s.buffer=nb;f.type='highpass';f.frequency.value=7000;v.gain.setValueAtTime(g,t);v.gain.exponentialRampToValueAtTime(.0001,t+.06);s.connect(f);f.connect(v);v.connect(out);s.start(t)}
+function beat(c,t,i){const bar=Math.floor(i/16)%4,st=i%16,ch=CH[bar];
+ if(st%4==0)env(c,t,.9,.005,.22,mg,120,'sine',45);
+ if(st==4||st==12)hat(c,t,mg,.12),env(c,t,.25,.002,.12,mg,200,'triangle',120);
+ if(st%2==1)hat(c,t,mg,.07);
+ if([0,3,6,8,11,14].includes(st))env(c,t,.5,.01,.28,mg,mf(BS[bar]),'triangle');
+ if(st%2==0)env(c,t,.16,.005,.35,mg,mf(ch[(st/2)%3|0]+12),'square');
+ if(st==0)ch.forEach(n=>env(c,t,.1,.3,1.9,mg,mf(n),'sawtooth'))}
+function sched(){const c=ac(),sp=60/104/4;while(M2.t<c.currentTime+.25){beat(c,Math.max(M2.t,c.currentTime),M2.step);M2.t+=sp;M2.step++}}
+function startGen(){const c=ac();if(!mg){const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2600;mg=c.createGain();mg.gain.value=.16;mg.connect(lp);lp.connect(c.destination)}
+ if(c.state=='suspended')c.resume();M2.t=c.currentTime+.05;clearInterval(M2.iv);M2.iv=setInterval(sched,80);M2.mode='gen'}
+async function startMusic(){if(!M2.on||M2.started)return;M2.started=true;
+ try{const r=await fetch('music.mp3',{method:'HEAD'});if(r.ok&&/audio|octet/.test(r.headers.get('content-type')||'')){M2.el=new Audio('music.mp3');M2.el.loop=true;M2.el.volume=.35;await M2.el.play();M2.mode='file';return}}catch{}
+ try{startGen()}catch{M2.started=false}}
+function stopMusic(){M2.started=false;clearInterval(M2.iv);if(M2.el){M2.el.pause();M2.el=null}M2.mode=null}
+function setMusic(on){M2.on=S.set.music=on;save();const b=$('#mus');if(b){b.textContent=on?'🎵':'🎶';b.style.opacity=on?1:.45}on?startMusic():stopMusic()}
+$('#snd').insertAdjacentHTML('beforebegin','<button class="ic" id="mus" aria-label="Toggle music">🎵</button>');
+$('#mus').onclick=()=>setMusic(!M2.on);if(!M2.on){$('#mus').style.opacity=.45;$('#mus').textContent='🎶'}
+['pointerdown','keydown','touchstart'].forEach(ev=>addEventListener(ev,()=>startMusic(),{once:true,passive:true}));
+document.addEventListener('visibilitychange',()=>{if(!M2.started)return;if(document.hidden){M2.el&&M2.el.pause();try{Sfx.ctx&&Sfx.ctx.suspend()}catch{}}else{M2.el&&M2.el.play().catch(()=>{});try{Sfx.ctx&&Sfx.ctx.resume()}catch{}}});
+}
+
+/* ============ player counter: total players + online now (private, owner only, view at #/stats) ============ */
+{
+let cid='';try{cid=localStorage.getItem('be11.id')||'';if(!/^[a-z0-9]{12,20}$/.test(cid)){cid=Array.from({length:16},()=>'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random()*36)]).join('');localStorage.setItem('be11.id',cid)}}catch{cid=''}
+let SD=null;try{SD=fbDb()}catch{}
+if(SD&&cid){
+ try{
+  SD.ref('.info/connected').on('value',sn=>{if(sn.val()===true){const r=SD.ref('stats/online/'+cid);r.onDisconnect().remove();r.set(Date.now()).catch(()=>{})}});
+  SD.ref('stats/visitors/'+cid).set(Date.now()).catch(()=>{});
+ }catch{}
+}
+V.stats=()=>{
+ app.innerHTML=`<h2>Players <small>owner only</small></h2><div class="gl" style="padding:22px;display:grid;gap:18px"><div><div style="font:900 64px var(--D);color:var(--g)" id="stOn">–</div><div class="note">Online now</div></div><div><div style="font:900 64px var(--D);color:var(--gold)" id="stTot">–</div><div class="note">Total devices that opened the game</div></div><p class="note" id="stMsg" style="margin:0">Registered accounts: Firebase console → Authentication → Users.</p></div>`;
+ const msg=t=>{const m=$('#stMsg');if(m)m.textContent=t};
+ if(!SD||!window.firebase||!firebase.auth)return msg('Could not reach Firebase.');
+ let a=null,b=null,la=null,lb=null;
+ const off=()=>{try{a&&a.off('value',la);b&&b.off('value',lb)}catch{}a=b=null},
+  bad=()=>msg('Only the owner account can see these numbers. Sign in with it (Profile → Sign in), then reopen this page.');
+ const un=firebase.auth().onAuthStateChanged(u=>{off();if(!u)return bad();
+  a=SD.ref('stats/online');b=SD.ref('stats/visitors');
+  la=sn=>{const e=$('#stOn');if(e)e.textContent=sn.numChildren()};lb=sn=>{const e=$('#stTot');if(e)e.textContent=sn.numChildren()};
+  a.on('value',la,bad);b.on('value',lb,bad)});
+ const stop=()=>{un();off();removeEventListener('hashchange',stop)};addEventListener('hashchange',stop);
+};
+if(location.hash=='#/stats')route();
 }
 
 </script></body></html>
