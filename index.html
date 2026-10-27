@@ -223,7 +223,7 @@ const _h=t=>{let a=0xdeadbeef,b=0x41c6ce57;for(let i=0;i<t.length;i++){const c=t
 _sg=()=>_h('be11|'+S.coins+'|'+S.owned.join(',')+'|'+S.st.earned+'|'+S.st.spent+'|'+S.st.w+'|'+S.st.l+'|k7q');
 const save=()=>{try{S.ts=Date.now();S.sig=_sg();localStorage.setItem(KEY,JSON.stringify(S))}catch{}typeof cloudPush=='function'&&cloudPush()};
 Sfx.on=S.set.sound;
-S.x=Object.assign({dayClaim:'',dStreak:0,missions:{day:'',list:[]},ach:{},cup:null,cupWins:0,sold:0,deal:''},S.x||{});
+S.x=Object.assign({dayClaim:'',dStreak:0,missions:{day:'',list:[]},ach:{},cup:null,cupWins:0,sold:0,deal:'',ow:0,fw:0},S.x||{});
 /* ---- save validation: reject edited / impossible saves, sanitize text ---- */
 (()=>{const ok=Number.isFinite(S.coins)&&S.coins>=0&&S.coins<=1e7&&Array.isArray(S.owned)&&S.owned.length<=PL.length&&S.owned.every(i=>Number.isInteger(i)&&PL[i-1])&&new Set(S.owned).size==S.owned.length&&S.st&&typeof S.st=='object';
  if(!ok||(S.sig&&S.sig!==_sg())){const d=def();S.coins=d.coins;S.owned=d.owned;S.st=d.st;S.squad=d.squad;S.hist=[];S.x.cup=null;S.x.tamper=(S.x.tamper||0)+1;setTimeout(()=>{try{toast('Save data looked modified, progress was reset')}catch{}},1500)}
@@ -287,7 +287,7 @@ const Game={apply(a){const m=M;if(!m||!m.R||!m.R.live||m.R.turn!==a.pi)return;co
   else{R.active=R.active.filter(i=>i!==a.pi);Sfx.play('pass');UI.flash(`${p.name} passes`,'red');if(R.active.length==1)return Game.end(R.active[0]);R.turn=Game.next(a.pi);UI.turn()}},
  next(i){const R=M.R,n=M.P.length;for(let k=1;k<=n;k++){const j=(i+k)%n;if(R.active.includes(j))return j}},
  timeout(){const R=M.R;R.high!=null?Game.end(R.high):Game.apply({type:'pass',pi:R.turn})},
- end(w){const m=M,R=m.R,p=m.P[w];R.live=false;clearInterval(m.iv);m.tm.forEach(clearTimeout);p.budget-=R.bid;p.won.push(R.card);m.log.unshift(`${p.name} won ${R.card.name} ${R.bid?'for '+R.bid+' 🪙':'free'}`);
+ end(w){const m=M,R=m.R,p=m.P[w];R.live=false;clearInterval(m.iv);m.tm.forEach(clearTimeout);p.budget-=R.bid;p.spent=(p.spent||0)+R.bid;p.won.push(R.card);m.log.unshift(`${p.name} won ${R.card.name} ${R.bid?'for '+R.bid+' 🪙':'free'}`);
   UI.flash(`${w==0?'YOU WIN IT':p.name+' wins'} · ${R.bid} 🪙`,'win');UI.paint();if(w==0){Sfx.play('win');burstEl($('.stage'),30)}else Sfx.play('pass');
   setTimeout(()=>{if(M!==m)return;m.round<m.rounds?(m.round++,Game.round()):Game.finish()},2100)},
  round(){const m=M,c=m.cards[m.round-1],ac=m.P.map((_,i)=>i).filter(i=>m.mode!='full'||m.P[i].won.length<11);if(!ac.length)return Game.finish();let tn=(m.round-1)%m.P.length;while(!ac.includes(tn))tn=(tn+1)%m.P.length;m.R={card:c,active:ac,bid:0,high:null,turn:tn,live:false};
@@ -301,7 +301,7 @@ const Game={apply(a){const m=M;if(!m||!m.R||!m.R.live||m.R.turn!==a.pi)return;co
  finish(){const m=M;clearInterval(m.iv);const teams=m.P.map((p,i)=>({i,p,...autoBuild(p.won)}));
   teams.sort((a,b)=>b.ev.overall-a.ev.overall||sum(b.p.won)-sum(a.p.won)||b.p.budget-a.p.budget);
   teams.forEach((t,k)=>{t.place=k+1;t.coins=reward(m.mode,t.place)});const me=teams.find(t=>t.i==0),st=S.st;
-  if(m.cup!=null)me.coins=Cup.reward(m.cup,me.place==1);S.coins+=me.coins;st.earned+=me.coins;st.w+=me.place==1?1:0;st.l+=me.place==1?0:1;st.streak=me.place==1?st.streak+1:0;st.best=Math.max(st.best,st.streak);
+  if(m.cup!=null)me.coins=Cup.reward(m.cup,me.place==1);S.coins+=me.coins;st.earned+=me.coins;st.w+=me.place==1?1:0;st.l+=me.place==1?0:1;st.streak=me.place==1?st.streak+1:0;st.best=Math.max(st.best,st.streak);if(me.place==1){if(m.mode=='online')S.x.ow++;if((m.P[0].spent||0)<=5)S.x.fw++}
   S.hist.unshift({mode:m.cfg.name,win:me.place==1,place:me.place,n:m.P.length,coins:me.coins,t:Date.now()});S.hist=S.hist.slice(0,40);save();
   Cup.done(m,me);track('play');if(me.place==1)track('win');checkAch();LAST={mode:m.mode,cfg:m.cfg,teams,cup:m.cup};save();Sfx.play('final');M=null;location.hash='#/results'}};
 /* ============ auction UI ============ */
@@ -423,7 +423,27 @@ const ACH=[
  {id:'dr',i:'⭐',n:'Dream XI',d:'Reach squad rating 85',c:120,k:()=>S.st.bestSq>=85},
  {id:'dl',i:'🤝',n:'Dealer',d:'Sell 5 players',c:60,k:()=>S.x.sold>=5},
  {id:'icn',i:'🌟',n:'Icon owner',d:'Own an Icon player',c:120,k:()=>S.owned.some(i=>PL[i-1].rarity=='Icon')},
- {id:'cup',i:'🏆',n:'Cup champion',d:'Win the cup',c:250,k:()=>S.x.cupWins>=1}];
+ {id:'cup',i:'🏆',n:'Cup champion',d:'Win the cup',c:250,k:()=>S.x.cupWins>=1},
+ {id:'w15',i:'🏅',n:'Winner',d:'Win 15 matches',c:100,k:()=>S.st.w>=15},
+ {id:'w30',i:'🥈',n:'Champion',d:'Win 30 matches',c:200,k:()=>S.st.w>=30},
+ {id:'s12',i:'🚀',n:'Invincible',d:'Win 12 in a row',c:300,k:()=>S.st.best>=12},
+ {id:'vt2',i:'🛡️',n:'Seasoned pro',d:'Play 100 matches',c:200,k:()=>S.st.w+S.st.l>=100},
+ {id:'on5',i:'🌐',n:'Online champ',d:'Win 5 online matches',c:150,k:()=>S.x.ow>=5},
+ {id:'fl',i:'🧾',n:'Free lunch',d:'Win a match spending 5 coins or less',c:120,k:()=>S.x.fw>=1},
+ {id:'c250',i:'📦',n:'Big collection',d:'Own 250 players',c:300,k:()=>S.owned.length>=250},
+ {id:'c400',i:'🏛️',n:'Hall of fame',d:'Own 400 players',c:500,k:()=>S.owned.length>=400},
+ {id:'ep10',i:'💜',n:'Epic collector',d:'Own 10 Epic players',c:150,k:()=>S.owned.map(i=>PL[i-1]).filter(p=>p.rarity=='Epic').length>=10},
+ {id:'lgm',i:'🌍',n:'League master',d:'Own 5 players from every league',c:400,k:()=>{const m={};S.owned.map(i=>PL[i-1]).forEach(p=>{if(p.rarity!='Icon')m[p.league]=(m[p.league]||0)+1});const v=Object.values(m);return v.length>=9&&v.every(n=>n>=5)}},
+ {id:'pset',i:'🧩',n:'Position set',d:'Own a player in every position',c:100,k:()=>new Set(S.owned.map(i=>PL[i-1]).map(p=>p.pos)).size>=10},
+ {id:'ic5',i:'💎',n:'Icon squad',d:'Own 5 Icon players',c:300,k:()=>S.owned.map(i=>PL[i-1]).filter(p=>p.rarity=='Icon').length>=5},
+ {id:'dr90',i:'🌠',n:'Dream XI II',d:'Reach squad rating 90',c:300,k:()=>S.st.bestSq>=90},
+ {id:'chm',i:'🔗',n:'Chemistry master',d:'Reach full chemistry in your squad',c:200,k:()=>{try{const a=S.squad.slots.map(i=>i?PL[i-1]:null);return a.every(Boolean)&&evalTeam(S.squad.f,a).chem>=33}catch(e){return false}}},
+ {id:'xi',i:'✨',n:'No commons',d:'Field 11 players, none Common',c:150,k:()=>{const a=S.squad.slots.map(i=>i?PL[i-1]:null);return a.every(p=>p&&p.rarity!='Common')}},
+ {id:'rich',i:'💰',n:'Rich',d:'Earn 5000 coins in total',c:200,k:()=>S.st.earned>=5000},
+ {id:'pk50',i:'🎰',n:'Pack master',d:'Open 50 packs',c:250,k:()=>S.st.packs>=50},
+ {id:'d7',i:'📅',n:'Loyal fan',d:'Claim a 7-day daily reward streak',c:150,k:()=>S.x.dStreak>=7},
+ {id:'cup3',i:'🏆',n:'Cup dynasty',d:'Win the cup 3 times',c:500,k:()=>S.x.cupWins>=3},
+ {id:'sl25',i:'🏷️',n:'Market mogul',d:'Sell 25 players',c:150,k:()=>S.x.sold>=25}];
 function checkAch(){ACH.forEach(a=>{if(!S.x.ach[a.id]&&a.k()){S.x.ach[a.id]=Date.now();gain(a.c);toast(`${a.i} ${a.n} unlocked +${a.c} 🪙`)}});save()}
 const msnReady=()=>missions().filter(q=>{const d=POOL.find(x=>x.id==q.id);return d&&q.p>=d.g&&!q.cl}).length;
 V.rewards=()=>{const nd=nextDay(),ready=dailyReady(),cur=ready?nd-1:S.x.dStreak;
