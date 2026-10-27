@@ -239,7 +239,7 @@ S.x=Object.assign({dayClaim:'',dStreak:0,missions:{day:'',list:[]},ach:{},cup:nu
 /* ============ formations & team evaluation ============ */
 const FM={'4-3-3':[['LW','ST','RW'],['CM','CM','CM'],['LB','CB','CB','RB']],'4-4-2':[['ST','ST'],['LM','CM','CM','RM'],['LB','CB','CB','RB']],'4-2-3-1':[['ST'],['LW','CAM','RW'],['CDM','CDM'],['LB','CB','CB','RB']],'3-4-3':[['LW','ST','RW'],['LM','CM','CM','RM'],['CB','CB','CB']],'3-5-2':[['ST','ST'],['LM','CM','CAM','CM','RM'],['CB','CB','CB']]};
 const LINE={GK:0,LB:1,CB:1,RB:1,CDM:2,CM:2,CAM:2,LM:2,RM:2,LW:3,RW:3,ST:3},NEAR={LM:'LW',LW:'LM',RM:'RW',RW:'RM',CDM:'CM',CM:'CDM',CAM:'CM'},SLC={};
-const fac=(s,p)=>s==p?1:(s=='GK'||p=='GK')?.3:(NEAR[s]==p||(s=='CM'&&p=='CAM'))?.95:({0:.9,1:.8}[Math.abs(LINE[s]-LINE[p])]||.62);
+const fac=(s,p)=>s==p?1:(s=='GK'||p=='GK')?.3:(NEAR[s]==p||(s=='CM'&&p=='CAM'))?.93:({0:.87,1:.77}[Math.abs(LINE[s]-LINE[p])]||.58);
 function slotsOf(f){if(SLC[f])return SLC[f];const rows=FM[f],n=rows.length,out=[{pos:'GK',x:50,y:91}];[...rows].reverse().forEach((r,ri)=>{const y=14+(n-1-ri)*(60/(n-1)),m=r.length,sp=[0,0,30,64,76,84][m];r.forEach((pos,k)=>out.push({pos,x:m==1?50:50-sp/2+k*sp/(m-1),y}))});return SLC[f]=out}
 function assign(f,pl){const sl=slotsOf(f),res=Array(11).fill(null),pr=[];sl.forEach((s,i)=>pl.forEach((p,j)=>pr.push([p.rating*fac(s.pos,p.pos),i,j])));pr.sort((a,b)=>b[0]-a[0]);const us=new Set,up=new Set;for(const[,i,j]of pr){if(us.has(i)||up.has(j))continue;us.add(i);up.add(j);res[i]=pl[j]}return res}
 const BONUS=[
@@ -309,7 +309,7 @@ const Game={apply(a){const m=M;if(!m||!m.R||!m.R.live||m.R.turn!==a.pi)return;co
   teams.forEach((t,k)=>{t.place=k+1;t.coins=reward(m.mode,t.place)});const me=teams.find(t=>t.i==0),st=S.st;
   if(m.cup!=null)me.coins=Cup.reward(m.cup,me.place==1);S.coins+=me.coins;st.earned+=me.coins;st.w+=me.place==1?1:0;st.l+=me.place==1?0:1;st.streak=me.place==1?st.streak+1:0;st.best=Math.max(st.best,st.streak);if(me.place==1){if(m.mode=='online')S.x.ow++;if((m.P[0].spent||0)<=5)S.x.fw++}
   S.hist.unshift({mode:m.cfg.name,win:me.place==1,place:me.place,n:m.P.length,coins:me.coins,t:Date.now()});S.hist=S.hist.slice(0,40);save();
-  Cup.done(m,me);track('play');if(me.place==1)track('win');checkAch();LAST={mode:m.mode,cfg:m.cfg,teams,cup:m.cup};save();Sfx.play('final');M=null;location.hash='#/results'}};
+  Cup.done(m,me);track('play');if(me.place==1)track('win');checkAch();lbWin(m,me);LAST={mode:m.mode,cfg:m.cfg,teams,cup:m.cup};save();Sfx.play('final');M=null;location.hash='#/results'}};
 /* ============ auction UI ============ */
 const UI={paint(){const m=M;if(!m||!m.R)return;const R=m.R;$('#rd').textContent=`ROUND ${m.round} / ${m.rounds}`;
   $('#ps').innerHTML=m.P.map((p,i)=>{const out=!R.active.includes(i);return`<div class="ch ${R.turn==i&&!out&&R.live?'turn':''} ${out?'out':''} ${R.high==i?'hi':''}"><b>${p.name}</b>🪙 ${p.budget}<small><br>${out?'PASSED':R.high==i?'HIGH BID':R.turn==i&&R.live?'TO ACT':'IN'} · ${p.won.length}${m.mode=='full'?'/11':''} won${m.mode=='ai'&&!p.human?' · '+p.pers:''}</small></div>`}).join('');
@@ -360,7 +360,7 @@ V.results=()=>{if(!LAST){location.hash='#/play';return}const L=LAST,T=L.teams,w=
   <div class="chips">${T.map(x=>`<button class="chip ${x.i==sel?'on':''}" data-s="${x.i}">${x.i==0?'You':x.p.name}</button>`).join('')}</div>
   <div class="sg" style="margin-top:14px"><div id="ap" class="pitch"></div><aside class="gl pn"><h3>${t.i==0?'Your':t.p.name+"'s"} lineup · ${t.f}</h3><p><b>Strongest:</b> ${fmt(ps[0])}</p><p><b>Weakest:</b> ${fmt(ps[ps.length-1])}</p><p class="note">Overall ${t.ev.overall}. Players out of position are rated lower, and empty slots count as 35.</p></aside></div>`;drawPitch($('#ap'),t.f,t.arr,{})};
  R();app.onclick=e=>{const c=e.target.closest('[data-t]');if(c){$$('.tabs .chip').forEach(x=>x.classList.toggle('on',x==c));c.dataset.t=='r'?R():A()}const s=e.target.closest('[data-s]');if(s)A(+s.dataset.s)}};
-const PACKS=[{n:'Basic Pack',price:100,k:3,col:'#3fb4ff',odds:{Common:70,Rare:24,Epic:5,Legendary:1}},{n:'Silver Pack',price:250,k:4,col:'#c9d6e2',odds:{Common:48,Rare:38,Epic:12,Legendary:2}},{n:'Premium Pack',price:500,k:5,col:'#b86bff',odds:{Common:25,Rare:45,Epic:25,Legendary:4,Icon:1}},{n:'Elite Pack',price:750,k:5,col:'#ff6b4a',odds:{Common:8,Rare:42,Epic:37,Legendary:11,Icon:2}},{n:'Legendary Pack',price:1000,k:5,col:'#ffc83d',odds:{Common:0,Rare:30,Epic:45,Legendary:22,Icon:3}}];
+const PACKS=[{n:'Basic Pack',price:125,k:3,col:'#3fb4ff',odds:{Common:70,Rare:24,Epic:5,Legendary:1}},{n:'Silver Pack',price:300,k:4,col:'#c9d6e2',odds:{Common:48,Rare:38,Epic:12,Legendary:2}},{n:'Premium Pack',price:650,k:5,col:'#b86bff',odds:{Common:25,Rare:45,Epic:25,Legendary:4,Icon:1}},{n:'Elite Pack',price:950,k:5,col:'#ff6b4a',odds:{Common:8,Rare:42,Epic:37,Legendary:11,Icon:2}},{n:'Legendary Pack',price:1300,k:5,col:'#ffc83d',odds:{Common:0,Rare:30,Epic:45,Legendary:22,Icon:3}}];
 function roll(pk){let r=rnd(100),rar='Common';for(const k in pk.odds){if(r<pk.odds[k]){rar=k;break}r-=pk.odds[k]}let p=pick(PL.filter(x=>x.rarity==rar));if(S.owned.includes(p.id)&&Math.random()<.5)p=pick(PL.filter(x=>x.rarity==rar));return p}
 V.shop=()=>{app.innerHTML=`<h2>Shop <small>Global coins: 🪙 ${S.coins}</small></h2><div class="packs">${PACKS.map((p,i)=>`<div class="pkc gl"><div class="pk" style="--c:${p.col}">${p.n.split(' ')[0]}<br>PACK</div><h3>${p.n}</h3><div>${p.k} players</div><div class="odds">${Object.entries(p.odds).filter(o=>o[1]).map(o=>o[0]+' '+o[1]+'%').join(' · ')}</div><div class="price">🪙 ${p.price}</div><button class="btn p" data-p="${i}" ${S.coins<p.price?'disabled':''}>Select</button></div>`).join('')}</div><p class="note">Duplicates convert to coins. New players go straight to your Collection.</p>`;
  app.onclick=e=>{const b=e.target.closest('[data-p]');if(b){Sfx.play('click');openPack(PACKS[+b.dataset.p])}}};
@@ -949,5 +949,29 @@ if(location.hash=='#/stats')route();
 }
 
 /* PWA: service worker makes the game installable */
+/* ============ Leaderboards (Firebase: bid11_lb/<board>/<uid> = {n,v,t}) ============ */
+const lbKey=m=>(!m||m.mode=='friend')?null:(m.net?'on_':'ai_')+(m.mode=='ai'||m.mode=='online'?'1v1':m.mode);
+const lbName=()=>String(S.x.nick||'').replace(/[^\p{L}\p{N} _.\-]/gu,'').trim().slice(0,12)||'Player';
+const lbUser=()=>{try{return window.firebase&&firebase.auth&&firebase.auth().currentUser}catch{return null}};
+function lbPush(){const u=lbUser();if(!u)return;try{const n=lbName(),t=Date.now(),o={},w=S.x.lw||{};for(const k in w)o[k+'/'+u.uid]={n,v:w[k],t};if((S.x.cupWins||0)>0)o['ai_cup/'+u.uid]={n,v:S.x.cupWins,t};if(S.st.bestSq>0)o['sq/'+u.uid]={n,v:Math.round(S.st.bestSq*10)/10,t};firebase.database().ref('bid11_lb').update(o).catch(()=>{})}catch{}}
+function lbWin(m,me){if(me.place!=1)return;const k=lbKey(m);if(!k)return;S.x.lw=S.x.lw||{};S.x.lw[k]=(S.x.lw[k]||0)+1;save();lbPush()}
+const LB_TABS={on:['🌐 Online wins',[['on_1v1','1v1 Online'],['on_full','Full Squad'],['on_multi','Multiplayer']]],ai:[ '🤖 Wins vs AI',[['ai_1v1','1v1 vs AI'],['ai_full','Full Squad'],['ai_cup','Cup titles']]],sq:['⭐ Best squad',[['sq','Highest squad rating']]]};
+V.leaderboard=()=>{
+ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+ app.innerHTML=`<h2>Leaderboard</h2><div class="row" id="lbt" style="margin:10px 0">${Object.entries(LB_TABS).map(([k,t])=>`<button class="btn s" data-t="${k}">${t[0]}</button>`).join(' ')}</div><div id="lbb"></div>`;
+ const u=lbUser(),w=S.x.lw||{};
+ const show=async t=>{
+  $$('#lbt button').forEach(b=>b.style.opacity=b.dataset.t==t?1:.55);
+  const box=$('#lbb');box.innerHTML=(u?'':'<p style="color:var(--mut)">Sign in from Profile to appear on the leaderboards.</p>')+LB_TABS[t][1].map(([k,n])=>`<div class="gl pn" style="margin:10px 0;padding:12px"><h3>${n}</h3><div class="lbl" id="l_${k}" style="color:var(--mut)">Loading…</div><small style="color:var(--mut)">${k=='sq'?'Your best: '+(Math.round(S.st.bestSq*10)/10):'Your '+(k=='ai_cup'?'cup titles: '+(S.x.cupWins||0):'wins: '+(w[k]||0))}</small></div>`).join('');
+  for(const [k] of LB_TABS[t][1]){
+   const el=$('#l_'+k);
+   try{const s=await firebase.database().ref('bid11_lb/'+k).orderByChild('v').limitToLast(10).once('value'),a=[];s.forEach(c=>{a.push({id:c.key,...c.val()})});a.reverse();
+    el.innerHTML=a.length?a.map((r,i)=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--ln);${u&&r.id==u.uid?'color:var(--g);font-weight:700':'color:var(--ink)'}"><span>${i+1<4?['🥇','🥈','🥉'][i]:(i+1)+'.'} ${esc(r.n)}</span><b>${r.v}</b></div>`).join(''):'No one yet. Be the first!'}
+   catch{el.textContent='Could not load. Check your connection.'}
+  }};
+ app.onclick=e=>{const b=e.target.closest('[data-t]');if(b)show(b.dataset.t)};
+ lbPush();show('on')};
+$('#nav a[href="#/rewards"]').insertAdjacentHTML('afterend','<a href="#/leaderboard">TOP</a>');
+
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script></body></html>
