@@ -279,7 +279,7 @@ if(!S.squad.slots.some(Boolean)){const b=autoBuild(S.owned.map(i=>PL[i-1]));S.sq
 function drawPitch(h,f,arr,o={}){const sl=slotsOf(f);if(h.children.length!=11)h.innerHTML=sl.map((_,i)=>`<div class="slot" data-i="${i}"></div>`).join('');
  sl.forEach((s,i)=>{const e=h.children[i],p=arr[i];e.style.left=s.x+'%';e.style.top=s.y+'%';e.classList.toggle('sel',o.sel===i);e.draggable=!!(p&&o.dnd);e.innerHTML=p?`<div class="mc r-${p.rarity} ${fac(s.pos,p.pos)<.9?'off':''}" title="${p.name} (${s.pos})"><b>${p.rating}</b><i>${p.pos}</i><span>${p.name.split(' ').pop()}</span></div>`:`<div class="emp">${s.pos}</div>`})}
 /* ============ rewards (edit freely) ============ */
-const REW={ai:{win:100,lose:20},online:{win:120,lose:25},multi:{win:200,part:[100,60,40,30,30]}};
+const REW={ai:{win:40,lose:8},online:{win:50,lose:10},multi:{win:80,part:[40,25,15,12,12]}};
 const reward=(mode,place)=>mode=='full'?(place==1?REW.full.win:REW.full.part[place-2]||20):mode=='multi'?(place==1?REW.multi.win:REW.multi.part[place-2]):(place==1?REW[mode].win:REW[mode].lose);
 const MODES={ai:{name:'1v1 vs AI',budget:20,rounds:8},online:{name:'1v1 Online',budget:20,rounds:8},multi:{name:'Multiplayer',budget:40,rounds:18}};
 /* ============ network seam: swap for WebSocket later ============ */
@@ -459,7 +459,7 @@ V.rewards=()=>{const nd=nextDay(),ready=dailyReady(),cur=ready?nd-1:S.x.dStreak;
  $('#dc').onclick=()=>{if(!dailyReady())return;S.x.dStreak=nextDay();S.x.dayClaim=today();gain(DAILY[S.x.dStreak-1]);Sfx.play('cheer');toast(`Daily reward +${DAILY[S.x.dStreak-1]} 🪙`);V.rewards()};
  app.onclick=e=>{const b=e.target.closest('[data-m]');if(!b||b.disabled)return;const q=missions()[+b.dataset.m],d=POOL.find(x=>x.id==q.id);if(q.p<d.g||q.cl)return;q.cl=true;gain(d.c);Sfx.play('coin');toast(`Mission done +${d.c} 🪙`);V.rewards()}};
 /* ============ cup ============ */
-const CUPS=[{stage:0,title:'Cup · Quarter-final',opp:'Red Falcons',pers:'Balanced',bonus:0,win:50},{stage:1,title:'Cup · Semi-final',opp:'Atlas United',pers:'Aggressive',bonus:2,win:100},{stage:2,title:'Cup · Final',opp:'Harbor City',pers:'Aggressive',bonus:4,win:300}];
+const CUPS=[{stage:0,title:'Cup · Quarter-final',opp:'Red Falcons',pers:'Balanced',bonus:0,win:20},{stage:1,title:'Cup · Semi-final',opp:'Atlas United',pers:'Aggressive',bonus:2,win:50},{stage:2,title:'Cup · Final',opp:'Harbor City',pers:'Aggressive',bonus:4,win:100}];
 const Cup={reward:(st,win)=>win?CUPS[st].win:20,done(m,me){if(m.cup==null)return;if(me.place==1){track('cupwin');if(m.cup==2){S.x.cupWins++;S.x.cup=null}else S.x.cup=m.cup+1}else S.x.cup=null;checkAch()}};
 V.cup=()=>{const c=S.x.cup;app.innerHTML=`<h2>Cup <small>🏆 ${S.x.cupWins} won</small></h2><p class="note">Win three matches in a row to lift the trophy. Lose once and the cup ends. Later rounds give the rival more coins to bid with.</p>${CUPS.map((q,i)=>{const st=c==null?'':i<c?'done':i==c?'cur':'lock';return`<div class="gl cs2 ${st}"><span style="font-size:26px">${st=='done'?'✅':st=='cur'?'⚔️':'🔒'}</span><div><b>${q.title.replace('Cup · ','')}</b><br><small style="color:var(--mut)">vs ${q.opp} · ${q.pers}</small></div><b class="gold">+${q.win} 🪙</b></div>`}).join('')}<div class="row" style="margin-top:16px"><button class="btn p" id="cg">${c==null?'START CUP':'PLAY '+CUPS[c].title.replace('Cup · ','').toUpperCase()}</button></div>`;
  $('#cg').onclick=()=>{if(S.x.cup==null){S.x.cup=0;save()}Sfx.play('click');begin('ai',0,CUPS[S.x.cup])}};
@@ -535,7 +535,7 @@ document.head.insertAdjacentHTML('beforeend','<style>.pp{display:flex;align-item
    S.x.av=+a.dataset.pid;delete S.x.photo;save();o.remove();Sfx.play('click');V.profile()}}}}
 
 /* ============ vs Friend: room code, host-authoritative, runs over the room capability ============ */
-REW.friend={win:60,lose:20};MODES.friend={name:'1v1 vs Friend',budget:20,rounds:8};
+REW.friend={win:30,lose:8};MODES.friend={name:'1v1 vs Friend',budget:20,rounds:8};
 const FR={lastSt:'',room:null,code:'',role:null,gp:null,last:0,seq:0,un:[],gone:null,iv:null,fin:false};
 const FRC='ABCDEFGHJKMNPQRSTUVWXYZ23456789',
  frClean=s=>String(s==null?'':s).replace(/[^\p{L}\p{N} _.\-]/gu,'').trim().slice(0,12),
@@ -674,7 +674,7 @@ function frAct(a){const m=M,R=m.R;if(!R||!R.live||R.turn!==0||!FR.room)return;FR
  c?c.insertAdjacentHTML('afterend',h):$('.modes').insertAdjacentHTML('beforeend',h);$('#frm').onclick=frMenu}}
 
 /* ============ Online: 1v1 Online + Multiplayer vs real players (public matchmaking queue, host-authoritative, Firebase) ============ */
-MODES.full={name:'Full Squad',budget:60,rounds:0};REW.full={win:150,part:[40,30,20]};
+MODES.full={name:'Full Squad',budget:60,rounds:0};REW.full={win:120,part:[40,28,20]};
 const FULLW={GK:1,LB:1,RB:1,CB:2,CDM:1,CM:1,CAM:1,LW:1,RW:1,ST:1};
 function makeDeck(n){const d=[],u=new Set();for(const po in FULLW)shuffle(PL.filter(p=>p.pos==po)).slice(0,FULLW[po]*n).forEach(p=>{d.push(p);u.add(p.id)});shuffle(PL.filter(p=>!u.has(p.id)&&p.pos=='GK')).slice(0,n).forEach(p=>d.push(p));
  /* guarantee at least 3 cards above Common (Rare/Epic/Legendary/Icon), swapped in at the same position so the deck stays balanced */
