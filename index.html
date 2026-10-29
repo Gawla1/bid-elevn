@@ -677,9 +677,9 @@ function frAct(a){const m=M,R=m.R;if(!R||!R.live||R.turn!==0||!FR.room)return;FR
 MODES.full={name:'Full Squad',budget:60,rounds:0};REW.full={win:120,part:[40,28,20]};
 const FULLW={GK:1,LB:1,RB:1,CB:2,CDM:1,CM:1,CAM:1,LW:1,RW:1,ST:1};
 function makeDeck(n){const d=[],u=new Set();for(const po in FULLW)shuffle(PL.filter(p=>p.pos==po)).slice(0,FULLW[po]*n).forEach(p=>{d.push(p);u.add(p.id)});shuffle(PL.filter(p=>!u.has(p.id)&&p.pos=='GK')).slice(0,n).forEach(p=>d.push(p));
- /* guarantee at least 3 cards above Common (Rare/Epic/Legendary/Icon), swapped in at the same position so the deck stays balanced */
+ /* guarantee at least 6 cards above Common (Rare/Epic/Legendary/Icon), swapped in at the same position so the deck stays balanced */
  const hi=x=>x.rarity!='Common';let c=d.filter(hi).length;
- for(const i of shuffle(d.map((_,i)=>i))){if(c>=3)break;if(hi(d[i]))continue;const alt=shuffle(PL.filter(x=>hi(x)&&x.pos==d[i].pos&&!d.includes(x)))[0];if(alt){d[i]=alt;c++}}
+ for(const i of shuffle(d.map((_,i)=>i))){if(c>=6)break;if(hi(d[i]))continue;const alt=shuffle(PL.filter(x=>hi(x)&&x.pos==d[i].pos&&!d.includes(x)))[0];if(alt){d[i]=alt;c++}}
  return shuffle(d)}
 function startFull(n){const cfg={...MODES.full,rounds:12*n},bn=shuffle(BOTS);M={mode:'full',cfg,rounds:cfg.rounds,round:1,cards:makeDeck(n),log:[],tm:[],P:[{name:'You',human:true,budget:cfg.budget,won:[]},...Array.from({length:n-1},(_,i)=>({name:bn[i],pers:pick(PERS),budget:cfg.budget,won:[]}))]};Sfx.play('whistle');location.hash='#/match'}
 const OL={id:'',mode:'online',n:2,key:'o2',q:null,room:null,role:null,hostId:'',ix:0,un:[],ru:[],tk:null,gi:null,jt:null,joinTo:null,t0:0,bad:new Set(),gt:{},fc:-1,fs:0,starting:false,fin:false,seq:0,lastSt:'',last:{},gone:{},tick:0};
