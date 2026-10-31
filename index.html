@@ -680,9 +680,8 @@ function makeDeck(n){const d=[],u=new Set();for(const po in FULLW)shuffle(PL.fil
  /* guarantee at least 6 cards above Common (Rare/Epic/Legendary/Icon), swapped in at the same position so the deck stays balanced */
  const hi=x=>x.rarity!='Common';let c=d.filter(hi).length;
  for(const i of shuffle(d.map((_,i)=>i))){if(c>=6)break;if(hi(d[i]))continue;const alt=shuffle(PL.filter(x=>hi(x)&&x.pos==d[i].pos&&!d.includes(x)))[0];if(alt){d[i]=alt;c++}}
- /* guarantee at least 4 cards rated above 80: swap in a >80 player of the same position (any position if none left) */
- let c80=d.filter(top80).length;
- for(const i of shuffle(d.map((_,i)=>i))){if(c80>=MIN80)break;if(top80(d[i]))continue;const alt=shuffle(PL.filter(x=>top80(x)&&x.pos==d[i].pos&&!d.includes(x)))[0]||shuffle(PL.filter(x=>top80(x)&&!d.includes(x)))[0];if(alt){d[i]=alt;c80++}}
+ /* guarantee at least 4 cards above 80 and 2 above 85 (same position when possible) */
+ ensureTop(d);
  return shuffle(d)}
 function startFull(n){const cfg={...MODES.full,rounds:12*n},bn=shuffle(BOTS);M={mode:'full',cfg,rounds:cfg.rounds,round:1,cards:makeDeck(n),log:[],tm:[],P:[{name:'You',human:true,budget:cfg.budget,won:[]},...Array.from({length:n-1},(_,i)=>({name:bn[i],pers:pick(PERS),budget:cfg.budget,won:[]}))]};Sfx.play('whistle');location.hash='#/match'}
 const OL={id:'',mode:'online',n:2,key:'o2',q:null,room:null,role:null,hostId:'',ix:0,un:[],ru:[],tk:null,gi:null,jt:null,joinTo:null,t0:0,bad:new Set(),gt:{},fc:-1,fs:0,starting:false,fin:false,seq:0,lastSt:'',last:{},gone:{},tick:0};
@@ -808,10 +807,16 @@ function olAct(a){const m=M,R=m.R;if(!R||!R.live||R.turn!==0||!OL.room)return;OL
  $('#fnp').onclick=e=>{const c=e.target.closest('[data-f]');if(!c)return;fn=+c.dataset.f;$$('#fnp .chip').forEach(x=>x.classList.toggle('on',x==c))};
  $('#fbot').onclick=()=>{app.onclick=null;startFull(fn)};$('#fon').onclick=()=>{app.onclick=null;olMenu('full',fn)}}}
 
-/* every match gets at least 4 cards rated above 80 (all modes) */
-const MIN80=4,top80=x=>x.rating>80;
-function drawCards(n,k){const d=shuffle(PL).slice(0,n);let c=d.filter(top80).length;
- if(c<MIN80){const pool=shuffle(PL.filter(x=>top80(x)&&!d.includes(x)));for(let i=0;i<n&&c<MIN80&&pool.length;i++){if(!top80(d[i])){d[i]=pool.pop();c++}}}return d}
+/* every match (all modes) gets at least 4 cards rated above 80, and at least 2 of them above 85 */
+const MIN80=4,MIN85=2,top80=x=>x.rating>80;
+function boost(d,min,lim,samePos){let c=d.filter(x=>x.rating>lim).length;if(c>=min)return d;
+ const vic=shuffle(d.map((_,i)=>i)).filter(i=>d[i].rating<=lim).sort((x,y)=>d[x].rating-d[y].rating);
+ for(const i of vic){if(c>=min)break;const ok=x=>x.rating>lim&&!d.includes(x);
+  const alt=(samePos&&shuffle(PL.filter(x=>ok(x)&&x.pos==d[i].pos))[0])||shuffle(PL.filter(ok))[0];
+  if(alt){d[i]=alt;c++}}
+ return d}
+function ensureTop(d){boost(d,MIN85,85,true);boost(d,MIN80,80,true);return d}
+function drawCards(n,k){return ensureTop(shuffle(PL).slice(0,n))}
 /* ============ router & shell ============ */
 function route(){const n=(location.hash||'#/home').slice(2),name=V[n]?n:'home';if(M&&name!='match')abort();app.onclick=null;$$('.po').forEach(e=>e.remove());
  app.classList.remove('v');void app.offsetWidth;app.classList.add('v');V[name]();$$('nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')=='#/'+name));$('#nav').classList.remove('open');scrollTo(0,0);num($('#coins'),S.coins)}
