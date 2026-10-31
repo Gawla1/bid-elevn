@@ -326,7 +326,7 @@ const UI={paint(){const m=M;if(!m||!m.R)return;const R=m.R;$('#rd').textContent=
 function abort(){if(M){clearInterval(M.iv);M.tm.forEach(clearTimeout);M=null}$$('.rv').forEach(e=>e.remove())}
 async function begin(mode,n,cup){const cfg=cup?{...MODES.ai,name:cup.title}:MODES[mode],np=mode=='multi'?n:2;let opp;
  if(mode!='ai'){const o=document.createElement('div');o.className='po';o.innerHTML=`<div class="spin"></div><h3>${mode=='online'?'Finding an opponent…':'Filling the lobby…'}</h3>`;document.body.append(o);opp=await Net.matchmake(mode,np);$('h3',o).textContent=`Matched: ${opp.map(x=>x.name).join(', ')}`;await sleep(1000);o.remove()}else opp=[{name:cup?cup.opp:'AI Coach'}];
- M={mode,cfg,rounds:cfg.rounds,round:1,cards:drawCards(cfg.rounds,3),log:[],tm:[],P:[{name:'You',human:true,budget:cfg.budget,won:[]},...opp.map(x=>({name:x.name,pers:pick(PERS),budget:cfg.budget,won:[]}))]};if(cup){M.cup=cup.stage;M.P[1].pers=cup.pers;M.P[1].budget+=cup.bonus}Sfx.play('whistle');location.hash='#/match'}
+ M={mode,cfg,rounds:cfg.rounds,round:1,cards:drawCards(cfg.rounds,3,mode),log:[],tm:[],P:[{name:'You',human:true,budget:cfg.budget,won:[]},...opp.map(x=>({name:x.name,pers:pick(PERS),budget:cfg.budget,won:[]}))]};if(cup){M.cup=cup.stage;M.P[1].pers=cup.pers;M.P[1].budget+=cup.bonus}Sfx.play('whistle');location.hash='#/match'}
 /* ============ views ============ */
 const app=$('#app'),V={};
 const COL=['#3dff8a','#3fb4ff','#ffc83d','#ff6bd6','#ff8a3d','#b86bff'];
@@ -680,8 +680,8 @@ function makeDeck(n){const d=[],u=new Set();for(const po in FULLW)shuffle(PL.fil
  /* guarantee at least 6 cards above Common (Rare/Epic/Legendary/Icon), swapped in at the same position so the deck stays balanced */
  const hi=x=>x.rarity!='Common';let c=d.filter(hi).length;
  for(const i of shuffle(d.map((_,i)=>i))){if(c>=6)break;if(hi(d[i]))continue;const alt=shuffle(PL.filter(x=>hi(x)&&x.pos==d[i].pos&&!d.includes(x)))[0];if(alt){d[i]=alt;c++}}
- /* guarantee at least 4 cards above 80 and 2 above 85 (same position when possible) */
- ensureTop(d);
+ /* Full Squad: 2 players -> 10 in group A (81-85) + 6 in B (86+); 3 -> 15 + 9; 4 -> 20 + 12. Same position when possible. */
+ ensureTop(d,5*n,3*n);
  return shuffle(d)}
 function startFull(n){const cfg={...MODES.full,rounds:12*n},bn=shuffle(BOTS);M={mode:'full',cfg,rounds:cfg.rounds,round:1,cards:makeDeck(n),log:[],tm:[],P:[{name:'You',human:true,budget:cfg.budget,won:[]},...Array.from({length:n-1},(_,i)=>({name:bn[i],pers:pick(PERS),budget:cfg.budget,won:[]}))]};Sfx.play('whistle');location.hash='#/match'}
 const OL={id:'',mode:'online',n:2,key:'o2',q:null,room:null,role:null,hostId:'',ix:0,un:[],ru:[],tk:null,gi:null,jt:null,joinTo:null,t0:0,bad:new Set(),gt:{},fc:-1,fs:0,starting:false,fin:false,seq:0,lastSt:'',last:{},gone:{},tick:0};
@@ -735,7 +735,7 @@ async function olLaunch(group){OL.starting=true;OL.role='host';
 function olStart(hum){const cfg=OL.mode=='full'?{...MODES.full,rounds:12*OL.n}:MODES[OL.mode],n=OL.n,bn=shuffle(BOTS);let bi=0;
  const P=hum.map((p,i)=>({name:i==0?'You':frClean(p.presence&&p.presence.nm)||'Player',human:true,pid:p.peer,budget:cfg.budget,won:[]}));
  while(P.length<n)P.push({name:bn[bi++%bn.length],human:false,pers:pick(PERS),budget:cfg.budget,won:[]});
- M={mode:OL.mode,net:'host',me:0,cfg,rounds:cfg.rounds,round:1,cards:OL.mode=='full'?makeDeck(OL.n):drawCards(cfg.rounds,3),log:[],lgd:[],tm:[],P};
+ M={mode:OL.mode,net:'host',me:0,cfg,rounds:cfg.rounds,round:1,cards:OL.mode=='full'?makeDeck(OL.n):drawCards(cfg.rounds,3,OL.mode),log:[],lgd:[],tm:[],P};
  OL.last={};clearInterval(OL.jt);
  OL.room.presence({grp:hum.map(p=>p.peer),st:{ph:'lobby'}});
  OL.ru.push(OL.room.onPeers(olHostSync));
@@ -807,16 +807,22 @@ function olAct(a){const m=M,R=m.R;if(!R||!R.live||R.turn!==0||!OL.room)return;OL
  $('#fnp').onclick=e=>{const c=e.target.closest('[data-f]');if(!c)return;fn=+c.dataset.f;$$('#fnp .chip').forEach(x=>x.classList.toggle('on',x==c))};
  $('#fbot').onclick=()=>{app.onclick=null;startFull(fn)};$('#fon').onclick=()=>{app.onclick=null;olMenu('full',fn)}}}
 
-/* every match (all modes) gets at least 4 cards rated above 80, and at least 2 of them above 85 */
-const MIN80=4,MIN85=2,top80=x=>x.rating>80;
-function boost(d,min,lim,samePos){let c=d.filter(x=>x.rating>lim).length;if(c>=min)return d;
- const vic=shuffle(d.map((_,i)=>i)).filter(i=>d[i].rating<=lim).sort((x,y)=>d[x].rating-d[y].rating);
- for(const i of vic){if(c>=min)break;const ok=x=>x.rating>lim&&!d.includes(x);
-  const alt=(samePos&&shuffle(PL.filter(x=>ok(x)&&x.pos==d[i].pos))[0])||shuffle(PL.filter(ok))[0];
-  if(alt){d[i]=alt;c++}}
+/* Every match (all modes) guarantees TWO SEPARATE groups of strong cards (no overlap):
+   group A = rated 81-85, group B = rated above 85.
+   1v1 / Friend / Cup: 4 in A + 2 in B. Multiplayer (18 rounds): 8 in A + 5 in B.
+   Full Squad: 2 players 10 A + 6 B, 3 players 15 A + 9 B, 4 players 20 A + 12 B. The rest stays random (may also be strong). */
+const MIN80=4,MIN85=2,inA=x=>x.rating>80&&x.rating<=85,inB=x=>x.rating>85;
+function band(d,min,test,vicTest){let c=d.filter(test).length;if(c>=min)return d;
+ const vic=shuffle(d.map((_,i)=>i)).filter(i=>vicTest(d[i])).sort((x,y)=>d[x].rating-d[y].rating),ok=x=>test(x)&&!d.includes(x);
+ for(const any of [false,true]){for(const i of vic){if(c>=min)break;if(test(d[i])||!vicTest(d[i]))continue;
+  const alt=shuffle(PL.filter(x=>ok(x)&&(any||x.pos==d[i].pos)))[0];if(alt){d[i]=alt;c++}}}
  return d}
-function ensureTop(d){boost(d,MIN85,85,true);boost(d,MIN80,80,true);return d}
-function drawCards(n,k){return ensureTop(shuffle(PL).slice(0,n))}
+function ensureTop(d,m80=MIN80,m85=MIN85){
+ band(d,m85,inB,x=>x.rating<=80);
+ band(d,m80,inA,x=>x.rating<=80);
+ band(d,m85,inB,x=>x.rating<=85&&!(inA(x)&&d.filter(inA).length<=m80));
+ band(d,m80,inA,x=>x.rating<=80||(inB(x)&&d.filter(inB).length>m85));return d}
+function drawCards(n,k,mode){const d=shuffle(PL).slice(0,n);return mode=='multi'?ensureTop(d,8,5):ensureTop(d)}
 /* ============ router & shell ============ */
 function route(){const n=(location.hash||'#/home').slice(2),name=V[n]?n:'home';if(M&&name!='match')abort();app.onclick=null;$$('.po').forEach(e=>e.remove());
  app.classList.remove('v');void app.offsetWidth;app.classList.add('v');V[name]();$$('nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')=='#/'+name));$('#nav').classList.remove('open');scrollTo(0,0);num($('#coins'),S.coins)}

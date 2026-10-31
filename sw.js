@@ -1,5 +1,5 @@
 /* Bid Eleven service worker. Bump VERSION on every update. */
-const VERSION = 'v6';
+const VERSION = 'v8';
 const CACHE = 'bid-eleven-' + VERSION;
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
