@@ -1,5 +1,5 @@
 /* Bid Eleven service worker. Bump VERSION on every update. */
-const VERSION = 'v4';
+const VERSION = 'v5';
 const CACHE = 'bid-eleven-' + VERSION;
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
@@ -21,7 +21,7 @@ self.addEventListener('fetch', e => {
   const r = e.request;
   if (r.method !== 'GET' || new URL(r.url).origin !== location.origin) return;
   e.respondWith(
-    fetch(r)
+    fetch(r, { cache: 'no-cache' })
       .then(res => {
         if (res && res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(r, copy)); }
         return res;
