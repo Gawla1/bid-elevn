@@ -237,7 +237,8 @@ S.x=Object.assign({dayClaim:'',dStreak:0,missions:{day:'',list:[]},ach:{},cup:nu
  if(S.x.photo&&!/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(S.x.photo))delete S.x.photo;
  if(!Number.isInteger(S.x.av))delete S.x.av})();
 /* ============ formations & team evaluation ============ */
-const FM={'4-3-3':[['LW','ST','RW'],['CM','CM','CM'],['LB','CB','CB','RB']],'4-4-2':[['ST','ST'],['LM','CM','CM','RM'],['LB','CB','CB','RB']],'4-2-3-1':[['ST'],['LW','CAM','RW'],['CDM','CDM'],['LB','CB','CB','RB']],'3-4-3':[['LW','ST','RW'],['LM','CM','CM','RM'],['CB','CB','CB']],'3-5-2':[['ST','ST'],['LM','CM','CAM','CM','RM'],['CB','CB','CB']]};
+const FM={'4-3-3':[['LW','ST','RW'],['CM','CM','CM'],['LB','CB','CB','RB']],'4-4-2':[['ST','ST'],['LM','CM','CM','RM'],['LB','CB','CB','RB']],'4-2-3-1':[['ST'],['LW','CAM','RW'],['CDM','CDM'],['LB','CB','CB','RB']],'3-4-3':[['LW','ST','RW'],['LM','CM','CM','RM'],['CB','CB','CB']],'3-5-2':[['ST','ST'],['LM','CM','CAM','CM','RM'],['CB','CB','CB']],
+'4-1-4-1':[['ST'],['LM','CM','CM','RM'],['CDM'],['LB','CB','CB','RB']],'4-5-1':[['ST'],['LM','CM','CAM','CM','RM'],['LB','CB','CB','RB']],'4-3-2-1':[['ST'],['CAM','CAM'],['CM','CM','CM'],['LB','CB','CB','RB']],'4-4-1-1':[['ST'],['CAM'],['LM','CM','CM','RM'],['LB','CB','CB','RB']],'4-3-1-2':[['ST','ST'],['CAM'],['CM','CM','CM'],['LB','CB','CB','RB']],'3-4-1-2':[['ST','ST'],['CAM'],['LM','CM','CM','RM'],['CB','CB','CB']],'5-3-2':[['ST','ST'],['CM','CM','CM'],['LB','CB','CB','CB','RB']],'5-4-1':[['ST'],['LM','CM','CM','RM'],['LB','CB','CB','CB','RB']]};
 const LINE={GK:0,LB:1,CB:1,RB:1,CDM:2,CM:2,CAM:2,LM:2,RM:2,LW:3,RW:3,ST:3},NEAR={LM:'LW',LW:'LM',RM:'RW',RW:'RM',CDM:'CM',CM:'CDM',CAM:'CM'},SLC={};
 const fac=(s,p)=>s==p?1:(s=='GK'||p=='GK')?.3:(NEAR[s]==p||(s=='CM'&&p=='CAM'))?.93:({0:.87,1:.77}[Math.abs(LINE[s]-LINE[p])]||.58);
 function slotsOf(f){if(SLC[f])return SLC[f];const rows=FM[f],n=rows.length,out=[{pos:'GK',x:50,y:91}];[...rows].reverse().forEach((r,ri)=>{const y=14+(n-1-ri)*(60/(n-1)),m=r.length,sp=[0,0,30,64,76,84][m];r.forEach((pos,k)=>out.push({pos,x:m==1?50:50-sp/2+k*sp/(m-1),y}))});return SLC[f]=out}
@@ -274,7 +275,7 @@ function improve(f,arr,pool){let best=evalTeam(f,arr).overall,go=true,it=0;
   for(let j=i+1;j<11;j++){[arr[i],arr[j]]=[arr[j],arr[i]];const o=evalTeam(f,arr).overall;if(o>best+1e-9){best=o;go=true}else[arr[i],arr[j]]=[arr[j],arr[i]]}
   for(const p of pool){if(arr.includes(p))continue;const old=arr[i];arr[i]=p;const o=evalTeam(f,arr).overall;if(o>best+1e-9){best=o;go=true}else arr[i]=old}}}
  return arr}
-function autoBuild(pl){let b;for(const f in FM){const arr=improve(f,assign(f,pl),pl),ev=evalTeam(f,arr);if(!b||ev.overall>b.ev.overall)b={f,arr,ev}}return b}
+function autoBuild(pl){let b;const pp=pl.length>60?[...pl].sort((x,y)=>y.rating-x.rating).slice(0,60):pl;for(const f in FM){const arr=improve(f,assign(f,pl),pp),ev=evalTeam(f,arr);if(!b||ev.overall>b.ev.overall)b={f,arr,ev}}return b}
 if(!S.squad.slots.some(Boolean)){const b=autoBuild(S.owned.map(i=>PL[i-1]));S.squad={f:b.f,slots:b.arr.map(p=>p?p.id:null)};save()}
 function drawPitch(h,f,arr,o={}){const sl=slotsOf(f);if(h.children.length!=11)h.innerHTML=sl.map((_,i)=>`<div class="slot" data-i="${i}"></div>`).join('');
  sl.forEach((s,i)=>{const e=h.children[i],p=arr[i];e.style.left=s.x+'%';e.style.top=s.y+'%';e.classList.toggle('sel',o.sel===i);e.draggable=!!(p&&o.dnd);e.innerHTML=p?`<div class="mc r-${p.rarity} ${fac(s.pos,p.pos)<.9?'off':''}" title="${p.name} (${s.pos})"><b>${p.rating}</b><i>${p.pos}</i><span>${p.name.split(' ').pop()}</span></div>`:`<div class="emp">${s.pos}</div>`})}
