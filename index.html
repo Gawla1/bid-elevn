@@ -264,25 +264,25 @@ const linkCol=(a,b)=>{const v=linkVal(a,b);return v>=2?'#3dff8a':v==1?'#ffc83d':
 function chemOf(f,arr){const sl=slotsOf(f),pc=Array(11).fill(0);
  linksOf(f).forEach(([i,j])=>{const v=Math.max(0,linkVal(arr[i],arr[j]));pc[i]+=v;pc[j]+=v});
  return pc.map((v,i)=>{const p=arr[i];if(!p)return 0;let c=Math.min(3,v);if(fac(sl[i].pos,p.pos)<.9)c=Math.max(0,c-1);return c})}
-function evalTeam(f,arr){const sl=slotsOf(f),L=[[],[],[],[]],pos=[],pc=chemOf(f,arr);
+function evalTeam(f,arr,nc){const sl=slotsOf(f),L=[[],[],[],[]],pos=[],pc=nc?Array(11).fill(0):chemOf(f,arr);
  sl.forEach((s,i)=>{const p=arr[i],c=p?fac(s.pos,p.pos):0,v=p?Math.min(99,Math.round(p.rating*c)+pc[i]):35;L[LINE[s.pos]].push(v);pos.push({slot:s.pos,v,p,chem:pc[i]})});
  const av=a=>a.reduce((x,y)=>x+y,0)/a.length,[gk,df,md,at]=L.map(av),ls=[gk,df,md,at];
  const bal=Math.max(0,Math.round(100-(Math.max(...ls)-Math.min(...ls))*1.4)),chem=Math.round(pc.reduce((x,y)=>x+y,0)/33*100);
  const bn=bonusesOf(arr),bp=bn.reduce((x,y)=>x+y.pts,0);
  return{overall:Math.round((gk*.14+df*.27+md*.27+at*.32+(bal-60)*.04+bp)*10)/10,bn,atk:Math.round(at),mid:Math.round(md),def:Math.round(df),gk:Math.round(gk),bal,chem,pc,pos}}
-function improve(f,arr,pool){let best=evalTeam(f,arr).overall,go=true,it=0;
+function improve(f,arr,pool,nc){let best=evalTeam(f,arr,nc).overall,go=true,it=0;
  while(go&&it++<3){go=false;for(let i=0;i<11;i++){
-  for(let j=i+1;j<11;j++){[arr[i],arr[j]]=[arr[j],arr[i]];const o=evalTeam(f,arr).overall;if(o>best+1e-9){best=o;go=true}else[arr[i],arr[j]]=[arr[j],arr[i]]}
-  for(const p of pool){if(arr.includes(p))continue;const old=arr[i];arr[i]=p;const o=evalTeam(f,arr).overall;if(o>best+1e-9){best=o;go=true}else arr[i]=old}}}
+  for(let j=i+1;j<11;j++){[arr[i],arr[j]]=[arr[j],arr[i]];const o=evalTeam(f,arr,nc).overall;if(o>best+1e-9){best=o;go=true}else[arr[i],arr[j]]=[arr[j],arr[i]]}
+  for(const p of pool){if(arr.includes(p))continue;const old=arr[i];arr[i]=p;const o=evalTeam(f,arr,nc).overall;if(o>best+1e-9){best=o;go=true}else arr[i]=old}}}
  return arr}
-function autoBuild(pl){let b;const pp=pl.length>60?[...pl].sort((x,y)=>y.rating-x.rating).slice(0,60):pl;for(const f in FM){const arr=improve(f,assign(f,pl),pp),ev=evalTeam(f,arr);if(!b||ev.overall>b.ev.overall)b={f,arr,ev}}return b}
+function autoBuild(pl,nc){let b;const pp=pl.length>60?[...pl].sort((x,y)=>y.rating-x.rating).slice(0,60):pl;for(const f in FM){const arr=improve(f,assign(f,pl),pp,nc),ev=evalTeam(f,arr,nc);if(!b||ev.overall>b.ev.overall)b={f,arr,ev}}return b}
 if(!S.squad.slots.some(Boolean)){const b=autoBuild(S.owned.map(i=>PL[i-1]));S.squad={f:b.f,slots:b.arr.map(p=>p?p.id:null)};save()}
 function drawPitch(h,f,arr,o={}){const sl=slotsOf(f);if(h.children.length!=11)h.innerHTML=sl.map((_,i)=>`<div class="slot" data-i="${i}"></div>`).join('');
  sl.forEach((s,i)=>{const e=h.children[i],p=arr[i];e.style.left=s.x+'%';e.style.top=s.y+'%';e.classList.toggle('sel',o.sel===i);e.draggable=!!(p&&o.dnd);e.innerHTML=p?`<div class="mc r-${p.rarity} ${fac(s.pos,p.pos)<.9?'off':''}" title="${p.name} (${s.pos})"><b>${p.rating}</b><i>${p.pos}</i><span>${p.name.split(' ').pop()}</span></div>`:`<div class="emp">${s.pos}</div>`})}
 /* ============ rewards (edit freely) ============ */
 const REW={ai:{win:40,lose:8},online:{win:50,lose:10},multi:{win:80,part:[40,25,15,12,12]}};
-const reward=(mode,place)=>mode=='full'?(place==1?REW.full.win:REW.full.part[place-2]||20):mode=='multi'?(place==1?REW.multi.win:REW.multi.part[place-2]):(place==1?REW[mode].win:REW[mode].lose);
-const MODES={ai:{name:'1v1 vs AI',budget:20,rounds:8},online:{name:'1v1 Online',budget:20,rounds:8},multi:{name:'Multiplayer',budget:40,rounds:18}};
+const reward=(mode,place,n)=>mode=='full'?((REW.full[n]||REW.full[2])[place-1]||20):mode=='multi'?(place==1?REW.multi.win:REW.multi.part[place-2]):(place==1?REW[mode].win:REW[mode].lose);
+const MODES={ai:{name:'1v1 vs AI',budget:25,rounds:8},online:{name:'1v1 Online',budget:25,rounds:8},multi:{name:'Multiplayer',budget:50,rounds:18}};
 /* ============ network seam: swap for WebSocket later ============ */
 const HANDLES=['StrikerX','NetBuster','GoalHawk','Maverick9','PitchKing'],BOTS=['Mira','Zed','Luna','Rex','Kai'],PERS=['Aggressive','Balanced','Conservative'];
 const Net={async matchmake(mode,n){await sleep(1600);return mode=='online'?[{name:pick(HANDLES)}]:Array.from({length:n-1},(_,i)=>({name:BOTS[i]}))},
@@ -305,9 +305,9 @@ const Game={apply(a){const m=M;if(!m||!m.R||!m.R.live||m.R.turn!==a.pi)return;co
   const val=Math.max(.25,1+(c.rating-77)/11)*{Common:.9,Rare:1,Epic:1.1,Legendary:1.2,Icon:1.35}[c.rarity],pm={Aggressive:1.5,Balanced:1.05,Conservative:.7}[p.pers],maxPay=avg*val*need*pm*(.85+Math.random()*.3);
   if(R.bid==0)return Math.random()<{Aggressive:.95,Balanced:.8,Conservative:.55}[p.pers]*(maxPay>=.6?1:.5)?'bid':'pass';
   return R.bid+1<=maxPay?'bid':'pass'},
- finish(){const m=M;clearInterval(m.iv);const teams=m.P.map((p,i)=>({i,p,...autoBuild(p.won)}));
+ finish(){const m=M;clearInterval(m.iv);const teams=m.P.map((p,i)=>({i,p,...autoBuild(p.won,true)}));
   teams.sort((a,b)=>b.ev.overall-a.ev.overall||sum(b.p.won)-sum(a.p.won)||b.p.budget-a.p.budget);
-  teams.forEach((t,k)=>{t.place=k+1;t.coins=reward(m.mode,t.place)});const me=teams.find(t=>t.i==0),st=S.st;
+  teams.forEach((t,k)=>{t.place=k+1;t.coins=reward(m.mode,t.place,m.P.length)});const me=teams.find(t=>t.i==0),st=S.st;
   if(m.cup!=null)me.coins=Cup.reward(m.cup,me.place==1);S.coins+=me.coins;st.earned+=me.coins;st.w+=me.place==1?1:0;st.l+=me.place==1?0:1;st.streak=me.place==1?st.streak+1:0;st.best=Math.max(st.best,st.streak);if(me.place==1){if(m.mode=='online')S.x.ow++;if((m.P[0].spent||0)<=5)S.x.fw++}
   S.hist.unshift({mode:m.cfg.name,win:me.place==1,place:me.place,n:m.P.length,coins:me.coins,t:Date.now()});S.hist=S.hist.slice(0,40);save();
   Cup.done(m,me);track('play');if(me.place==1)track('win');checkAch();lbWin(m,me);LAST={mode:m.mode,cfg:m.cfg,teams,cup:m.cup};save();Sfx.play('final');M=null;location.hash='#/results'}};
@@ -337,29 +337,29 @@ V.home=()=>{const last=S.hist[0],lat=S.owned.slice(-6).reverse().map(i=>PL[i-1])
  ${last?`<div class="gl res"><span style="font-size:30px">${last.win?'🏆':'❌'}</span><div><b>Last match: ${last.win?'Win':'Loss'}</b><br><small style="color:var(--mut)">${last.mode} · place ${last.place}/${last.n}</small></div><b style="margin-left:auto;color:var(--gold)">+${last.coins} 🪙</b></div>`:''}
  <section class="sec"><h3>Latest players</h3><div class="strip">${lat.map(p=>card(p,{s:'--w:120px',ns:1})).join('')}</div></section>`};
 V.play=()=>{let n=4;app.innerHTML=`<h2>Choose a mode</h2><div class="modes">
- <button class="mode gl" data-m="ai"><h3>1v1 vs AI</h3><p>20 coins · 8 rounds</p><small>Beat a computer coach that bids with its own style.</small></button>
- <button class="mode gl" data-m="online"><h3>1v1 Online</h3><p>20 coins · 8 rounds</p><small>Matched with a real player online. If nobody is found you can play the AI instead.</small></button>
- <div class="mode gl"><h3>Multiplayer</h3><p>40 coins · 18 rounds</p><div class="chips" id="np">${[3,4,5,6].map(k=>`<button class="chip ${k==n?'on':''}" data-n="${k}">${k} players</button>`).join('')}</div><button class="btn p" data-m="multi">Start match</button></div></div>
+ <button class="mode gl" data-m="ai"><h3>1v1 vs AI</h3><p>25 coins · 8 rounds</p><small>Beat a computer coach that bids with its own style.</small></button>
+ <button class="mode gl" data-m="online"><h3>1v1 Online</h3><p>25 coins · 8 rounds</p><small>Matched with a real player online. If nobody is found you can play the AI instead.</small></button>
+ <div class="mode gl"><h3>Multiplayer</h3><p>50 coins · 18 rounds</p><div class="chips" id="np">${[3,4,5,6].map(k=>`<button class="chip ${k==n?'on':''}" data-n="${k}">${k} players</button>`).join('')}</div><button class="btn p" data-m="multi">Start match</button></div></div>
  <p class="note">Match coins are temporary. Only the reward goes to your global coins. Starting bidder rotates every round.</p>`;
  app.onclick=e=>{const c=e.target.closest('[data-n]');if(c){n=+c.dataset.n;$$('#np .chip').forEach(x=>x.classList.toggle('on',x==c));return}const b=e.target.closest('[data-m]');if(b){Sfx.play('click');app.onclick=null;begin(b.dataset.m,n)}}};
 V.match=()=>{if(!M){location.hash='#/play';return}
  app.innerHTML=`<div class="au"><div class="ah gl"><span id="rd"></span><span style="font-size:18px;color:var(--mut)">${M.cfg.name}</span><button class="btn s" id="ff">Forfeit</button></div><div class="ps" id="ps"></div>
  <div class="stage"><div id="ch"></div><div class="tmr"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" stroke="#ffffff22"/><circle id="rg" cx="22" cy="22" r="19"/></svg><div id="tn">10</div></div></div>
  <div class="bb gl"><small style="color:var(--mut)">Current bid</small><div class="bn" id="bid">0</div><div id="hb" style="color:var(--mut)"></div></div>
- <div class="acts"><button class="btn p" id="bb">BID +1</button><button class="btn d" id="pb">PASS</button></div><div class="you">Your match coins <b id="my"></b> 🪙</div><div class="lgx" id="lgx"></div></div>`;
+ <div class="acts"><button class="btn p" id="bb">BID +1</button><button class="btn d" id="pb">PASS</button></div><div class="you">Your match coins <b id="my"></b> 🪙</div><div class="lgx" id="lgx"></div><div class="mhint">⬇ Scroll down to see your lineup</div><div class="gl pn mlu" id="mlu"><h3>Your lineup <small id="mlt"></small></h3><div id="mp" class="pitch"></div><div class="mlist" id="ml"></div></div></div>`;
  $('#bb').onclick=()=>Net.send({type:'bid',pi:0});$('#pb').onclick=()=>Net.send({type:'pass',pi:0});
  $('#ff').onclick=()=>{if(confirm('Forfeit this match? You will not earn a reward.')){abort();location.hash='#/home'}};Game.round()};
 V.results=()=>{if(!LAST){location.hash='#/play';return}const L=LAST,T=L.teams,w=T[0],me=T.find(t=>t.i==0);let tab='r';
  app.innerHTML=`<h2>Match results</h2><div class="tabs"><button class="chip on" data-t="r">Results</button><button class="chip" data-t="a">Analysis</button></div><div id="rb"></div>`;
  const R=()=>{$('#rb').innerHTML=`<div class="ban">${w.i==0?'YOU WIN!':w.p.name.toUpperCase()+' WINS'}</div>${T.map((t,k)=>`<div class="tr gl ${k==0?'w':''}" style="--k:${k}"><span class="md">${['🥇','🥈','🥉'][k]||'#'+(k+1)}</span><div><h4>${t.i==0?'You':t.p.name}</h4><small>${t.f} · ATT ${t.ev.atk} · MID ${t.ev.mid} · DEF ${t.ev.def} · GK ${t.ev.gk}<br>${t.p.won.length} players · +${t.coins} 🪙${t.i==0?' (yours)':''}</small></div><div class="ov">${t.ev.overall}<small>overall</small></div></div>`).join('')}
  <div class="row" style="margin-top:14px"><a class="btn p" href="${L.cup!=null?'#/cup':'#/play'}">${L.cup!=null?'Continue cup':'Play again'}</a><a class="btn" href="#/profile">Profile</a></div>`;Sfx.play(w.i==0?'cheer':'lose');setTimeout(()=>{const e=$('.tr.w');if(e){burstEl(e,w.i==0?40:10);me&&fly($('.ban'),Math.min(10,3+me.coins/20|0))}},700)};
- const A=(sel=T[0].i)=>{const mets=[['atk','Attack'],['mid','Midfield'],['def','Defense'],['gk','Goalkeeper'],['bal','Squad balance'],['chem','Chemistry']],t=T.find(x=>x.i==sel),ps=t.ev.pos.slice().sort((a,b)=>b.v-a.v),others=T.slice(1),
+ const A=(sel=T[0].i)=>{const mets=[['atk','Attack'],['mid','Midfield'],['def','Defense'],['gk','Goalkeeper'],['bal','Squad balance']],t=T.find(x=>x.i==sel),ps=t.ev.pos.slice().sort((a,b)=>b.v-a.v),others=T.slice(1),
   why=[...mets.filter(([k])=>k!='chem'&&others.every(o=>w.ev[k]>o.ev[k])).map(([k,n])=>({atk:'Strongest attack',mid:'Better midfield',def:'Best defensive coverage',gk:'Higher goalkeeper rating',bal:'Better squad balance'}[k]+` (${w.ev[k]} vs ${Math.max(...others.map(o=>o.ev[k]))})`)),`Highest weighted team rating (${w.ev.overall})`],
   fmt=x=>`${x.slot}: ${x.p?x.p.name:'empty slot'} (${x.v})`;
   $('#rb').innerHTML=`<div class="gl pn" style="margin-bottom:14px"><h3>${w.i==0?'You':w.p.name} won because</h3><ul class="why">${why.map(r=>`<li>${r}</li>`).join('')}</ul></div>
   <div class="gl pn" style="margin-bottom:14px">${mets.map(([k,n])=>{const mx=Math.max(...T.map(x=>x.ev[k]));return`<div class="mt"><h4>${n}</h4>${T.map(x=>`<div class="br"><span>${x.i==0?'You':x.p.name}</span><i class="${x.ev[k]==mx?'top':''}" style="--w:${x.ev[k]}%;--c:${COL[x.i]}"></i><b>${x.ev[k]}</b></div>`).join('')}</div>`}).join('')}</div>
   <div class="chips">${T.map(x=>`<button class="chip ${x.i==sel?'on':''}" data-s="${x.i}">${x.i==0?'You':x.p.name}</button>`).join('')}</div>
-  <div class="sg" style="margin-top:14px"><div id="ap" class="pitch"></div><aside class="gl pn"><h3>${t.i==0?'Your':t.p.name+"'s"} lineup · ${t.f}</h3><p><b>Strongest:</b> ${fmt(ps[0])}</p><p><b>Weakest:</b> ${fmt(ps[ps.length-1])}</p><p class="note">Overall ${t.ev.overall}. Players out of position are rated lower, and empty slots count as 35.</p></aside></div>`;drawPitch($('#ap'),t.f,t.arr,{})};
+  <div class="sg" style="margin-top:14px"><div id="ap" class="pitch"></div><aside class="gl pn"><h3>${t.i==0?'Your':t.p.name+"'s"} lineup · ${t.f}</h3><p><b>Strongest:</b> ${fmt(ps[0])}</p><p><b>Weakest:</b> ${fmt(ps[ps.length-1])}</p><p class="note">Overall ${t.ev.overall}. Players out of position are rated lower, and empty slots count as 35.</p></aside></div>`;drawPitch($('#ap'),t.f,t.arr,{nc:1})};
  R();app.onclick=e=>{const c=e.target.closest('[data-t]');if(c){$$('.tabs .chip').forEach(x=>x.classList.toggle('on',x==c));c.dataset.t=='r'?R():A()}const s=e.target.closest('[data-s]');if(s)A(+s.dataset.s)}};
 const PACKS=[{n:'Basic Pack',price:125,k:3,col:'#3fb4ff',odds:{Common:73,Rare:22.5,Epic:4,Legendary:.5}},{n:'Silver Pack',price:300,k:4,col:'#c9d6e2',odds:{Common:52,Rare:37,Epic:10,Legendary:1}},{n:'Premium Pack',price:650,k:5,col:'#b86bff',odds:{Common:30,Rare:47,Epic:21,Legendary:1.8,Icon:.2}},{n:'Elite Pack',price:950,k:5,col:'#ff6b4a',odds:{Common:14,Rare:46,Epic:35,Legendary:4.5,Icon:.5}},{n:'Legendary Pack',price:1300,k:5,col:'#ffc83d',odds:{Common:0,Rare:38,Epic:49,Legendary:12,Icon:1}}];
 function roll(pk){let r=Math.random()*100,rar='Common';for(const k in pk.odds){if(r<pk.odds[k]){rar=k;break}r-=pk.odds[k]}let p=pick(PL.filter(x=>x.rarity==rar));if(S.owned.includes(p.id)&&Math.random()<.5)p=pick(PL.filter(x=>x.rarity==rar));return p}
@@ -487,7 +487,7 @@ document.head.insertAdjacentHTML('beforeend','<style>.dys{display:grid;grid-temp
 
 /* ============ chemistry links on the pitch ============ */
 const _dp=drawPitch;
-drawPitch=function(h,f,arr,o={}){let sv=h.querySelector('svg.lk');if(sv)sv.remove();_dp(h,f,arr,o);
+drawPitch=function(h,f,arr,o={}){let sv=h.querySelector('svg.lk');if(sv)sv.remove();_dp(h,f,arr,o);if(o.nc)return;
  const sl=slotsOf(f),pc=chemOf(f,arr);sv=document.createElementNS('http://www.w3.org/2000/svg','svg');sv.setAttribute('class','lk');sv.setAttribute('viewBox','0 0 100 100');sv.setAttribute('preserveAspectRatio','none');
  sv.innerHTML=linksOf(f).map(([i,j])=>{const v=linkVal(arr[i],arr[j]),col=linkCol(arr[i],arr[j]);return`<line x1="${sl[i].x}" y1="${sl[i].y}" x2="${sl[j].x}" y2="${sl[j].y}" stroke="${col}" stroke-width="${v>=2?3.2:2}" vector-effect="non-scaling-stroke" ${v<=0?'stroke-dasharray="4 4" opacity=".55"':''}/>`}).join('');
  h.prepend(sv);if(h.id=='pt'){const bn=$('#bn'),bs=bonusesOf(arr);if(bn)bn.innerHTML=BONUS.map(b=>`<span class="bnc ${bs.includes(b)?'on':''}" title="${b.d}">${bs.includes(b)?'✔':'🔒'} ${b.n} <b>+${b.pts}</b><small>${b.d}</small></span>`).join('')}
@@ -501,7 +501,7 @@ document.head.insertAdjacentHTML('beforeend','<style>.card .cl{opacity:1;font-we
 const TUT=[
  {i:'🔨',h:'Bid for players',p:'Each round one player goes up for auction. Tap <b>BID +1</b> to raise the price by one coin, or <b>PASS</b>. Your match coins are limited, so spend them where it counts.'},
  {i:'⚽',h:'Build your eleven',p:'After the rounds, the game builds your best lineup. In <b>Squad</b> you can place players yourself. A player in the wrong position is rated lower, and goalkeepers should stay in goal.'},
- {i:'🔗',h:'Chemistry',p:'Players next to each other are linked. Each card shows its <b>league in a colour</b>: same colour means a link. Fill the team from one league or country for bonus titles. Chemistry adds up to +3 to each player\'s rating.',lg:[['#3dff8a','Same club, or same league + country (2 pts)'],['#ffc83d','Same league, or same country (1 pt)'],['#ff4d5e','No link (0 pts)'],['#ffc83d','Icons: yellow with anyone, green with Icons or same country']]},
+ {i:'🔗',h:'Chemistry',p:'Chemistry only works in your <b>Squad</b> page (not inside matches). Players next to each other are linked. Each card shows its <b>league in a colour</b>: same colour means a link. Fill the team from one league or country for bonus titles. Chemistry adds up to +3 to each player\'s rating.',lg:[['#3dff8a','Same club, or same league + country (2 pts)'],['#ffc83d','Same league, or same country (1 pt)'],['#ff4d5e','No link (0 pts)'],['#ffc83d','Icons: yellow with anyone, green with Icons or same country']]},
  {i:'🌟',h:'Rarities & Icons',p:'Common, Rare, Epic and Legendary players fill the packs. <b>Icons</b> are club legends: very rare, and great at linking a squad together.'},
  {i:'🎁',h:'Earn and grow',p:'Claim <b>Rewards</b> every day, finish missions, unlock badges, win the <b>Cup</b> and grab the <b>Player of the Day</b> in the shop. Sell players you do not need.'}];
 function showTutorial(){let k=0;const o=document.createElement('div');o.className='tut';document.body.append(o);
@@ -536,7 +536,7 @@ document.head.insertAdjacentHTML('beforeend','<style>.pp{display:flex;align-item
    S.x.av=+a.dataset.pid;delete S.x.photo;save();o.remove();Sfx.play('click');V.profile()}}}}
 
 /* ============ vs Friend: room code, host-authoritative, runs over the room capability ============ */
-REW.friend={win:30,lose:8};MODES.friend={name:'1v1 vs Friend',budget:20,rounds:8};
+REW.friend={win:30,lose:8};MODES.friend={name:'1v1 vs Friend',budget:25,rounds:8};
 const FR={lastSt:'',room:null,code:'',role:null,gp:null,last:0,seq:0,un:[],gone:null,iv:null,fin:false};
 const FRC='ABCDEFGHJKMNPQRSTUVWXYZ23456789',
  frClean=s=>String(s==null?'':s).replace(/[^\p{L}\p{N} _.\-]/gu,'').trim().slice(0,12),
@@ -671,11 +671,11 @@ function frAct(a){const m=M,R=m.R;if(!R||!R.live||R.turn!==0||!FR.room)return;FR
 
 /* ---- play menu card ---- */
 {const _p=V.play;V.play=()=>{_p();const c=$('.mode[data-m="online"]');
- const h='<button class="mode gl" id="frm"><h3>👥 vs Friend</h3><p>20 coins · 8 rounds</p><small>Create a room code and play a private 1v1 with a friend.</small></button>';
+ const h='<button class="mode gl" id="frm"><h3>👥 vs Friend</h3><p>25 coins · 8 rounds</p><small>Create a room code and play a private 1v1 with a friend.</small></button>';
  c?c.insertAdjacentHTML('afterend',h):$('.modes').insertAdjacentHTML('beforeend',h);$('#frm').onclick=frMenu}}
 
 /* ============ Online: 1v1 Online + Multiplayer vs real players (public matchmaking queue, host-authoritative, Firebase) ============ */
-MODES.full={name:'Full Squad',budget:60,rounds:0};REW.full={win:120,part:[40,28,20]};
+MODES.full={name:'Full Squad',budget:60,rounds:0};const fullBudget=n=>(n>4?70:60)*n;REW.full={2:[120,40],3:[150,60,30],4:[180,80,50,30],5:[220,100,65,40,25],6:[260,120,80,55,35,25]};
 const FULLW={GK:1,LB:1,RB:1,CB:2,CDM:1,CM:1,CAM:1,LW:1,RW:1,ST:1};
 function makeDeck(n){const d=[],u=new Set();for(const po in FULLW)shuffle(PL.filter(p=>p.pos==po)).slice(0,FULLW[po]*n).forEach(p=>{d.push(p);u.add(p.id)});shuffle(PL.filter(p=>!u.has(p.id)&&p.pos=='GK')).slice(0,n).forEach(p=>d.push(p));
  /* guarantee at least 6 cards above Common (Rare/Epic/Legendary/Icon), swapped in at the same position so the deck stays balanced */
@@ -684,7 +684,7 @@ function makeDeck(n){const d=[],u=new Set();for(const po in FULLW)shuffle(PL.fil
  /* Full Squad: 2 players -> 10 in group A (81-85) + 6 in B (86+); 3 -> 15 + 9; 4 -> 20 + 12. Same position when possible. */
  ensureTop(d,5*n,3*n);
  return shuffle(d)}
-function startFull(n){const cfg={...MODES.full,rounds:12*n},bn=shuffle(BOTS);M={mode:'full',cfg,rounds:cfg.rounds,round:1,cards:makeDeck(n),log:[],tm:[],P:[{name:'You',human:true,budget:cfg.budget,won:[]},...Array.from({length:n-1},(_,i)=>({name:bn[i],pers:pick(PERS),budget:cfg.budget,won:[]}))]};Sfx.play('whistle');location.hash='#/match'}
+function startFull(n){const cfg={...MODES.full,rounds:12*n,budget:fullBudget(n)},bn=shuffle(BOTS);M={mode:'full',cfg,rounds:cfg.rounds,round:1,cards:makeDeck(n),log:[],tm:[],P:[{name:'You',human:true,budget:cfg.budget,won:[]},...Array.from({length:n-1},(_,i)=>({name:bn[i],pers:pick(PERS),budget:cfg.budget,won:[]}))]};Sfx.play('whistle');location.hash='#/match'}
 const OL={id:'',mode:'online',n:2,key:'o2',q:null,room:null,role:null,hostId:'',ix:0,un:[],ru:[],tk:null,gi:null,jt:null,joinTo:null,t0:0,bad:new Set(),gt:{},fc:-1,fs:0,starting:false,fin:false,seq:0,lastSt:'',last:{},gone:{},tick:0};
 const olPeers=()=>OL.room?OL.room.peers():[],
  olL=g=>g==null||!M?null:(g-M.me+M.P.length)%M.P.length;
@@ -696,7 +696,7 @@ async function olMenu(mode,n){olClose();$$('.po').forEach(e=>e.remove());
  if(!S.x.nick){S.x.nick='Player'+(100+rnd(900));save()}
  Object.assign(OL,{id:Math.random().toString(36).slice(2,10),mode,n:mode=='online'?2:n,t0:Date.now(),bad:new Set(),gt:{},fc:-1,fs:0,starting:false,fin:false,seq:0,lastSt:'',last:{},tick:0});OL.key=mode=='online'?'o2':(mode=='full'?'f':'m')+OL.n;
  const o=document.createElement('div');o.className='po onq';
- o.innerHTML=`<div class="gl pn frb"><h2>${mode=='online'?'1v1 Online':(mode=='full'?'Full Squad · ':'Multiplayer · ')+OL.n+' players'}</h2><p class="note" style="margin:0">Real players · ${MODES[mode].budget} coins · ${mode=='full'?12*OL.n:MODES[mode].rounds} rounds</p><input class="fri" id="onn" maxlength="12" placeholder="Your name" value="${frNick()}" autocomplete="off"><div class="frs"><div class="spin"></div><span id="onT">Connecting…</span></div><button class="btn" id="onb" style="display:none">${mode=='online'?'Play vs AI instead':'Play vs bots instead'}</button><button class="btn s" id="onx" style="align-self:center">Cancel</button></div>`;
+ o.innerHTML=`<div class="gl pn frb"><h2>${mode=='online'?'1v1 Online':(mode=='full'?'Full Squad · ':'Multiplayer · ')+OL.n+' players'}</h2><p class="note" style="margin:0">Real players · ${mode=='full'?fullBudget(OL.n):MODES[mode].budget} coins · ${mode=='full'?12*OL.n:MODES[mode].rounds} rounds</p><input class="fri" id="onn" maxlength="12" placeholder="Your name" value="${frNick()}" autocomplete="off"><div class="frs"><div class="spin"></div><span id="onT">Connecting…</span></div><button class="btn" id="onb" style="display:none">${mode=='online'?'Play vs AI instead':'Play vs bots instead'}</button><button class="btn s" id="onx" style="align-self:center">Cancel</button></div>`;
  document.body.append(o);
  $('#onx',o).onclick=()=>{olClose();o.remove();olBack()};
  $('#onb',o).onclick=()=>{const md=OL.mode,nn=OL.n;olClose();o.remove();md=='online'?_begin('ai'):md=='full'?startFull(nn):_begin('multi',nn)};
@@ -733,7 +733,7 @@ async function olLaunch(group){OL.starting=true;OL.role='host';
  const hum=ids.filter(here).map(i=>olPeers().find(p=>p.peer===i)).filter(Boolean);
  if(hum.length<2){olRequeue('Not everyone connected · searching again');return}
  olStart(hum)}
-function olStart(hum){const cfg=OL.mode=='full'?{...MODES.full,rounds:12*OL.n}:MODES[OL.mode],n=OL.n,bn=shuffle(BOTS);let bi=0;
+function olStart(hum){const cfg=OL.mode=='full'?{...MODES.full,rounds:12*OL.n,budget:fullBudget(OL.n)}:MODES[OL.mode],n=OL.n,bn=shuffle(BOTS);let bi=0;
  const P=hum.map((p,i)=>({name:i==0?'You':frClean(p.presence&&p.presence.nm)||'Player',human:true,pid:p.peer,budget:cfg.budget,won:[]}));
  while(P.length<n)P.push({name:bn[bi++%bn.length],human:false,pers:pick(PERS),budget:cfg.budget,won:[]});
  M={mode:OL.mode,net:'host',me:0,cfg,rounds:cfg.rounds,round:1,cards:OL.mode=='full'?makeDeck(OL.n):drawCards(cfg.rounds,3,OL.mode),log:[],lgd:[],tm:[],P};
@@ -804,8 +804,8 @@ function olAct(a){const m=M,R=m.R;if(!R||!R.live||R.turn!==0||!OL.room)return;OL
  $('#bb').disabled=true;$('#pb').disabled=true;setTimeout(()=>{if(M===m)UI.paint()},2500)}
 {const _vm=V.match;V.match=()=>{if(M&&M.net=='guest'){const r=Game.round;Game.round=()=>{};try{_vm()}finally{Game.round=r}olGView(null,true)}else _vm()}}
 
-{const _p=V.play;V.play=()=>{_p();let fn=3;$('.modes').insertAdjacentHTML('beforeend',`<div class="mode gl" id="fcard"><h3>🧩 Full Squad</h3><p>60 coins · 11 players each</p><small>Everyone builds a complete eleven. 12 rounds per player.</small><div class="chips" id="fnp">${[2,3,4].map(k=>`<button class="chip ${k==fn?'on':''}" data-f="${k}">${k} players</button>`).join('')}</div><div class="row"><button class="btn p s" id="fbot">Vs bots</button><button class="btn s" id="fon">Online</button></div></div>`);
- $('#fnp').onclick=e=>{const c=e.target.closest('[data-f]');if(!c)return;fn=+c.dataset.f;$$('#fnp .chip').forEach(x=>x.classList.toggle('on',x==c))};
+{const _p=V.play;V.play=()=>{_p();let fn=3;$('.modes').insertAdjacentHTML('beforeend',`<div class="mode gl" id="fcard"><h3>🧩 Full Squad</h3><p id="fbt">${fullBudget(fn)} coins · 11 players each</p><small>Everyone builds a complete eleven. 12 rounds per player.</small><div class="chips" id="fnp">${[2,3,4,5,6].map(k=>`<button class="chip ${k==fn?'on':''}" data-f="${k}">${k} players</button>`).join('')}</div><div class="row"><button class="btn p s" id="fbot">Vs bots</button><button class="btn s" id="fon">Online</button></div></div>`);
+ $('#fnp').onclick=e=>{const c=e.target.closest('[data-f]');if(!c)return;fn=+c.dataset.f;$('#fbt').textContent=fullBudget(fn)+' coins · 11 players each';$$('#fnp .chip').forEach(x=>x.classList.toggle('on',x==c))};
  $('#fbot').onclick=()=>{app.onclick=null;startFull(fn)};$('#fon').onclick=()=>{app.onclick=null;olMenu('full',fn)}}}
 
 /* Every match (all modes) guarantees TWO SEPARATE groups of strong cards (no overlap):
@@ -824,6 +824,14 @@ function ensureTop(d,m80=MIN80,m85=MIN85){
  band(d,m85,inB,x=>x.rating<=85&&!(inA(x)&&d.filter(inA).length<=m80));
  band(d,m80,inA,x=>x.rating<=80||(inB(x)&&d.filter(inB).length>m85));return d}
 function drawCards(n,k,mode){const d=shuffle(PL).slice(0,n);return mode=='multi'?ensureTop(d,8,5):ensureTop(d)}
+
+/* ============ live lineup under the auction (no chemistry in matches) ============ */
+document.head.insertAdjacentHTML('beforeend','<style>.mhint{text-align:center;color:var(--mut);font-size:14px}.mlu{padding:14px}.mlu h3{margin:0 0 10px}.mlu h3 small{color:var(--mut);font-weight:500}.mlist{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.mlist span{border:1px solid var(--ln);border-radius:999px;padding:3px 10px;font-size:14px;background:#0b1f17}.mlist b{color:var(--gold)}</style>');
+function muPaint(){const m=M,h=$('#mp');if(!m||!h||!m.P||!m.P[0])return;const w=m.P[0].won,k=w.map(c=>c.id).join(',');if(h._k===k)return;h._k=k;
+ const b=w.length?autoBuild(w,true):null;drawPitch(h,b?b.f:'4-3-3',b?b.arr:Array(11).fill(null),{nc:1});
+ $('#mlt').textContent=`· ${w.length}${m.mode=='full'?' / 11':''} players${b?' · '+b.f:''}`;
+ $('#ml').innerHTML=w.slice().sort((a,c)=>c.rating-a.rating).map(p=>`<span><b>${p.rating}</b> ${p.pos} · ${p.name}</span>`).join('')||'<span style="border:0;background:none;color:var(--mut)">No players yet. Win a round to start your team.</span>'}
+{const _mu=UI.paint;UI.paint=function(){_mu.apply(this,arguments);try{muPaint()}catch(e){}}}
 /* ============ router & shell ============ */
 function route(){const n=(location.hash||'#/home').slice(2),name=V[n]?n:'home';if(M&&name!='match')abort();app.onclick=null;$$('.po').forEach(e=>e.remove());
  app.classList.remove('v');void app.offsetWidth;app.classList.add('v');V[name]();$$('nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')=='#/'+name));$('#nav').classList.remove('open');scrollTo(0,0);num($('#coins'),S.coins)}
