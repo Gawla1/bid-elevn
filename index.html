@@ -361,8 +361,8 @@ V.results=()=>{if(!LAST){location.hash='#/play';return}const L=LAST,T=L.teams,w=
   <div class="chips">${T.map(x=>`<button class="chip ${x.i==sel?'on':''}" data-s="${x.i}">${x.i==0?'You':x.p.name}</button>`).join('')}</div>
   <div class="sg" style="margin-top:14px"><div id="ap" class="pitch"></div><aside class="gl pn"><h3>${t.i==0?'Your':t.p.name+"'s"} lineup · ${t.f}</h3><p><b>Strongest:</b> ${fmt(ps[0])}</p><p><b>Weakest:</b> ${fmt(ps[ps.length-1])}</p><p class="note">Overall ${t.ev.overall}. Players out of position are rated lower, and empty slots count as 35.</p></aside></div>`;drawPitch($('#ap'),t.f,t.arr,{})};
  R();app.onclick=e=>{const c=e.target.closest('[data-t]');if(c){$$('.tabs .chip').forEach(x=>x.classList.toggle('on',x==c));c.dataset.t=='r'?R():A()}const s=e.target.closest('[data-s]');if(s)A(+s.dataset.s)}};
-const PACKS=[{n:'Basic Pack',price:125,k:3,col:'#3fb4ff',odds:{Common:70,Rare:24,Epic:5,Legendary:1}},{n:'Silver Pack',price:300,k:4,col:'#c9d6e2',odds:{Common:48,Rare:38,Epic:12,Legendary:2}},{n:'Premium Pack',price:650,k:5,col:'#b86bff',odds:{Common:25,Rare:45,Epic:25,Legendary:4,Icon:1}},{n:'Elite Pack',price:950,k:5,col:'#ff6b4a',odds:{Common:8,Rare:42,Epic:37,Legendary:11,Icon:2}},{n:'Legendary Pack',price:1300,k:5,col:'#ffc83d',odds:{Common:0,Rare:30,Epic:45,Legendary:22,Icon:3}}];
-function roll(pk){let r=rnd(100),rar='Common';for(const k in pk.odds){if(r<pk.odds[k]){rar=k;break}r-=pk.odds[k]}let p=pick(PL.filter(x=>x.rarity==rar));if(S.owned.includes(p.id)&&Math.random()<.5)p=pick(PL.filter(x=>x.rarity==rar));return p}
+const PACKS=[{n:'Basic Pack',price:125,k:3,col:'#3fb4ff',odds:{Common:73,Rare:22.5,Epic:4,Legendary:.5}},{n:'Silver Pack',price:300,k:4,col:'#c9d6e2',odds:{Common:52,Rare:37,Epic:10,Legendary:1}},{n:'Premium Pack',price:650,k:5,col:'#b86bff',odds:{Common:30,Rare:47,Epic:21,Legendary:1.8,Icon:.2}},{n:'Elite Pack',price:950,k:5,col:'#ff6b4a',odds:{Common:14,Rare:46,Epic:35,Legendary:4.5,Icon:.5}},{n:'Legendary Pack',price:1300,k:5,col:'#ffc83d',odds:{Common:0,Rare:38,Epic:49,Legendary:12,Icon:1}}];
+function roll(pk){let r=Math.random()*100,rar='Common';for(const k in pk.odds){if(r<pk.odds[k]){rar=k;break}r-=pk.odds[k]}let p=pick(PL.filter(x=>x.rarity==rar));if(S.owned.includes(p.id)&&Math.random()<.5)p=pick(PL.filter(x=>x.rarity==rar));return p}
 V.shop=()=>{app.innerHTML=`<h2>Shop <small>Global coins: 🪙 ${S.coins}</small></h2><div class="packs">${PACKS.map((p,i)=>`<div class="pkc gl"><div class="pk" style="--c:${p.col}">${p.n.split(' ')[0]}<br>PACK</div><h3>${p.n}</h3><div>${p.k} players</div><div class="odds">${Object.entries(p.odds).filter(o=>o[1]).map(o=>o[0]+' '+o[1]+'%').join(' · ')}</div><div class="price">🪙 ${p.price}</div><button class="btn p" data-p="${i}" ${S.coins<p.price?'disabled':''}>Select</button></div>`).join('')}</div><p class="note">Duplicates convert to coins. New players go straight to your Collection.</p>`;
  app.onclick=e=>{const b=e.target.closest('[data-p]');if(b){Sfx.play('click');openPack(PACKS[+b.dataset.p])}}};
 function openPack(pk){const o=document.createElement('div');o.className='po';o.innerHTML=`<div class="pk big" style="--c:${pk.col}">${pk.n.split(' ')[0]}<br>PACK</div><button class="btn p xl" id="op">OPEN PACK</button><button class="btn s" id="cx">Cancel</button>`;document.body.append(o);$('#cx',o).onclick=()=>o.remove();
@@ -917,16 +917,48 @@ const ac=()=>Sfx.ctx||(Sfx.ctx=new (window.AudioContext||window.webkitAudioConte
 let mg=null,nb=null;
 function env(c,t,g,a,d,out,f,type,fe){const o=c.createOscillator(),v=c.createGain();o.type=type||'sine';o.frequency.setValueAtTime(f,t);if(fe)o.frequency.exponentialRampToValueAtTime(fe,t+d);v.gain.setValueAtTime(.0001,t);v.gain.exponentialRampToValueAtTime(g,t+a);v.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(v);v.connect(out);o.start(t);o.stop(t+d+.05)}
 function hat(c,t,out,g){if(!nb){nb=c.createBuffer(1,c.sampleRate*.1,c.sampleRate);const d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}const s=c.createBufferSource(),f=c.createBiquadFilter(),v=c.createGain();s.buffer=nb;f.type='highpass';f.frequency.value=7000;v.gain.setValueAtTime(g,t);v.gain.exponentialRampToValueAtTime(.0001,t+.06);s.connect(f);f.connect(v);v.connect(out);s.start(t)}
-function beat(c,t,i){const bar=Math.floor(i/16)%4,st=i%16,ch=CH[bar];
- if(st%4==0)env(c,t,.9,.005,.22,mg,120,'sine',45);
- if(st==4||st==12)hat(c,t,mg,.12),env(c,t,.25,.002,.12,mg,200,'triangle',120);
- if(st%2==1)hat(c,t,mg,.07);
- if([0,3,6,8,11,14].includes(st))env(c,t,.5,.01,.28,mg,mf(BS[bar]),'triangle');
- if(st%2==0)env(c,t,.16,.005,.35,mg,mf(ch[(st/2)%3|0]+12),'square');
- if(st==0)ch.forEach(n=>env(c,t,.1,.3,1.9,mg,mf(n),'sawtooth'))}
-function sched(){const c=ac(),sp=60/104/4;while(M2.t<c.currentTime+.25){beat(c,Math.max(M2.t,c.currentTime),M2.step);M2.t+=sp;M2.step++}}
-function startGen(){const c=ac();if(!mg){const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2600;mg=c.createGain();mg.gain.value=.16;mg.connect(lp);lp.connect(c.destination)}
- if(c.state=='suspended')c.resume();M2.t=c.currentTime+.05;clearInterval(M2.iv);M2.iv=setInterval(sched,80);M2.mode='gen'}
+/* chill lo-fi track: 8-bar loop (Am9 Fmaj7 Cmaj9 G6 Am9 Dm7 Fmaj7 E7), 76 BPM, original */
+const CP=[[57,60,64,67,71],[53,57,60,64],[55,59,62,64],[50,55,59,64],[57,60,64,67,71],[50,57,60,65],[53,57,60,64],[52,56,59,62]],CB=[45,41,48,43,45,50,41,40],
+CM=[[[2,76,.8],[6,72,.5],[8,74,1.2]],[[2,72,.6],[6,69,.6],[10,72,1]],[[0,71,.5],[4,74,.5],[8,76,1.4]],[[2,74,.6],[6,71,.6],[10,67,1.4]],[[2,76,.8],[6,79,.5],[8,76,1.2]],[[0,77,.6],[4,74,.6],[8,72,.6],[12,74,.6]],[[2,72,.6],[6,69,.6],[8,67,.5],[12,69,1]],[[0,68,.6],[4,71,.6],[8,76,2]]];
+function chill(c,t,i){const bar=Math.floor(i/16)%8,cyc=Math.floor(i/128)%2,st=i%16,sp=60/76/4;
+ if(st%2)t+=sp*.28;
+ if(st==0||st==10)env(c,t,.5,.004,.3,mg,110,'sine',42);
+ if(st==7&&bar%2)env(c,t,.3,.004,.25,mg,100,'sine',45);
+ if(st==4||st==12){hat(c,t,mg,.09);env(c,t,.1,.002,.14,mg,190,'triangle',130)}
+ if(st%2==0)hat(c,t,mg,.03+Math.random()*.02);
+ if(Math.random()<.12)hat(c,t,mg,.02);
+ if(st==0||st==10){const ch=CP[bar],g=st?.05:.075;ch.forEach(n=>{env(c,t,g,.06,st?1.2:3.4,mg,mf(n),'triangle');env(c,t,g*.45,.06,st?1.2:3.4,mg,mf(n)*1.004,'sine')})}
+ if(st==0||st==8)env(c,t,.55,.02,st?.7:1.1,mg,mf(CB[bar]),'sine');
+ if(st==14&&bar%2==0)env(c,t,.3,.02,.4,mg,mf(CB[bar]+7),'sine');
+ if(cyc==0||bar%4<2||bar==5||bar==7)CM[bar].forEach(([x,n,d])=>{if(st==x){const m=cyc?n-12:n,g=cyc?.1:.16;env(c,t,g,.02,d+.5,mg,mf(m),'sine');env(c,t,g*.3,.02,d+.3,mg,mf(m+12),'triangle')}})}
+
+/* extra tracks. The game now rotates: Chill -> Stadium -> Trap -> Epic, 16 bars each (all original, generated live) */
+let nzb=null;
+function nzz(c,t,g,d,type,fq){if(!nzb){nzb=c.createBuffer(1,c.sampleRate*.5,c.sampleRate);const a=nzb.getChannelData(0);for(let k=0;k<a.length;k++)a[k]=Math.random()*2-1}const s=c.createBufferSource(),f=c.createBiquadFilter(),v=c.createGain();s.buffer=nzb;f.type=type;f.frequency.value=fq;v.gain.setValueAtTime(g,t);v.gain.exponentialRampToValueAtTime(.0001,t+d);s.connect(f);f.connect(v);v.connect(mg);s.start(t);s.stop(t+d+.02)}
+const mK=(c,t,g)=>env(c,t,g,.004,.28,mg,115,'sine',42),mC=(c,t,g)=>{nzz(c,t,g,.13,'bandpass',1700);nzz(c,t+.012,g*.7,.1,'bandpass',1400)},mP=(c,t,n,g,a,d,ty)=>n.forEach(x=>env(c,t,g,a,d,mg,mf(x),ty));
+const ST={ch:[[60,64,67],[55,59,62],[57,60,64],[53,57,60]],rt:[36,43,45,41]},TP={ch:[[60,63,67],[56,60,63],[58,62,65],[55,58,62]],rt:[48,44,46,43],bell:[84,82,79,75,79,82]},EP={ch:[[57,60,64,69],[53,57,60,65],[48,55,60,64],[55,59,62,67]],rt:[33,29,36,31],mel:[76,77,79,74]};
+function stadium(c,t,i){const b=(i>>4)%4,s=i%16,ch=ST.ch[b],r=ST.rt[b],L=[0,3,6,8,10,12];
+ if([0,2,8,10].includes(s))mK(c,t,.75);
+ if(s==4||s==12)mC(c,t,.3);
+ if(s%4==2){hat(c,t,mg,.09);env(c,t,.42,.01,.2,mg,mf(r+12),'sawtooth')}
+ if(L.includes(s))env(c,t,.14,.005,.2,mg,mf(ch[[0,1,2,1,2,1][L.indexOf(s)]]+12),'square');
+ if(s==0)mP(c,t,ch,.07,.05,1.6,'sawtooth')}
+function trap(c,t,i){const b=(i>>4)%4,s=i%16,ch=TP.ch[b];
+ if(s==0||s==10)mK(c,t,.5);
+ if(s==8)mC(c,t,.28);
+ if(s%2==0||s==15||s==13)hat(c,t,mg,s>=13?.05:.08);
+ if(s==0||s==6||s==10)env(c,t,.85,.005,s?.5:.9,mg,mf(TP.rt[b]),'sine');
+ if(s==0)mP(c,t,ch.map(n=>n+12),.05,.4,3,'triangle');
+ if(s%4==2&&Math.random()<.7){const n=TP.bell[(i>>1)%6];env(c,t,.12,.004,.9,mg,mf(n),'sine');env(c,t,.04,.004,.5,mg,mf(n+12),'triangle')}}
+function epic(c,t,i){const b=(i>>4)%4,s=i%16,ch=EP.ch[b];
+ if(s==0||s==8)env(c,t,.9,.005,.5,mg,95,'sine',38);
+ if(s==6||s==14)env(c,t,.5,.005,.35,mg,130,'sine',60);
+ if(b==3&&s>=10)nzz(c,t,.14+(s-10)*.02,.08,'bandpass',1200);
+ if(s==0){mP(c,t,ch,.06,1.5,3.6,'sawtooth');env(c,t,.6,.2,3,mg,mf(EP.rt[b]+12),'sine');const n=EP.mel[b];env(c,t+.1,.14,.25,2.8,mg,mf(n),'triangle');env(c,t+.1,.05,.25,2.8,mg,mf(n),'sawtooth')}}
+const TR=[{bpm:76,f:chill},{bpm:128,f:stadium},{bpm:140,f:trap},{bpm:96,f:epic}];
+function sched(){const c=ac();while(M2.t<c.currentTime+.25){const T=TR[M2.tr],tt=Math.max(M2.t,c.currentTime);T.f(c,tt,M2.step);if(M2.step>=248){const k=M2.step-248;nzz(c,tt,.03+k*.01,.09,'highpass',2500+k*500)}M2.t+=60/T.bpm/4;M2.step++;if(M2.step>=256){M2.step=0;M2.tr=(M2.tr+1)%TR.length}}}
+function startGen(){const c=ac();if(!mg){const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2800;mg=c.createGain();mg.gain.value=.21;mg.connect(lp);lp.connect(c.destination)}
+ if(c.state=='suspended')c.resume();M2.t=c.currentTime+.05;M2.step=0;{let l=-1;try{l=+localStorage.getItem('b11_trk')}catch{}let n;do n=Math.floor(Math.random()*TR.length);while(n==l&&TR.length>1);M2.tr=n;try{localStorage.setItem('b11_trk',n)}catch{}}clearInterval(M2.iv);M2.iv=setInterval(sched,80);M2.mode='gen'}
 async function startMusic(){if(!M2.on||M2.started)return;M2.started=true;
  try{const r=await fetch('music.mp3',{method:'HEAD'});if(r.ok&&/audio|octet/.test(r.headers.get('content-type')||'')){M2.el=new Audio('music.mp3');M2.el.loop=true;M2.el.volume=.35;await M2.el.play();M2.mode='file';return}}catch{}
  try{startGen()}catch{M2.started=false}}
