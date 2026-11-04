@@ -307,10 +307,11 @@ const Game={apply(a){const m=M;if(!m||!m.R||!m.R.live||m.R.turn!==a.pi)return;co
   return R.bid+1<=maxPay?'bid':'pass'},
  finish(){const m=M;clearInterval(m.iv);const teams=m.P.map((p,i)=>({i,p,...autoBuild(p.won,true)}));
   teams.sort((a,b)=>b.ev.overall-a.ev.overall||sum(b.p.won)-sum(a.p.won)||b.p.budget-a.p.budget);
+  if(m.walk){const k=teams.findIndex(t=>t.i==0);if(k>0)teams.unshift(teams.splice(k,1)[0])}
   teams.forEach((t,k)=>{t.place=k+1;t.coins=reward(m.mode,t.place,m.P.length)});const me=teams.find(t=>t.i==0),st=S.st;
   if(m.cup!=null)me.coins=Cup.reward(m.cup,me.place==1);S.coins+=me.coins;st.earned+=me.coins;st.w+=me.place==1?1:0;st.l+=me.place==1?0:1;st.streak=me.place==1?st.streak+1:0;st.best=Math.max(st.best,st.streak);if(me.place==1){if(m.mode=='online')S.x.ow++;if((m.P[0].spent||0)<=5)S.x.fw++}
   S.hist.unshift({mode:m.cfg.name,win:me.place==1,place:me.place,n:m.P.length,coins:me.coins,t:Date.now()});S.hist=S.hist.slice(0,40);save();
-  Cup.done(m,me);track('play');if(me.place==1)track('win');checkAch();lbWin(m,me);LAST={mode:m.mode,cfg:m.cfg,teams,cup:m.cup};save();Sfx.play('final');M=null;location.hash='#/results'}};
+  Cup.done(m,me);track('play');if(me.place==1)track('win');checkAch();lbWin(m,me);S.x.pend=null;LAST={mode:m.mode,cfg:m.cfg,teams,cup:m.cup,walk:!!m.walk};save();Sfx.play('final');M=null;location.hash='#/results'}};
 /* ============ auction UI ============ */
 const UI={paint(){const m=M;if(!m||!m.R)return;const R=m.R;$('#rd').textContent=`ROUND ${m.round} / ${m.rounds}`;
   $('#ps').innerHTML=m.P.map((p,i)=>{const out=!R.active.includes(i);return`<div class="ch ${R.turn==i&&!out&&R.live?'turn':''} ${out?'out':''} ${R.high==i?'hi':''}"><b>${p.name}</b>🪙 ${p.budget}<small><br>${out?'PASSED':R.high==i?'HIGH BID':R.turn==i&&R.live?'TO ACT':'IN'} · ${p.won.length}${m.mode=='full'?'/11':''} won${m.mode=='ai'&&!p.human?' · '+p.pers:''}</small></div>`}).join('');
@@ -348,7 +349,7 @@ V.match=()=>{if(!M){location.hash='#/play';return}
  <div class="bb gl"><small style="color:var(--mut)">Current bid</small><div class="bn" id="bid">0</div><div id="hb" style="color:var(--mut)"></div></div>
  <div class="acts"><button class="btn p" id="bb">BID +1</button><button class="btn d" id="pb">PASS</button></div><div class="you">Your match coins <b id="my"></b> 🪙</div><div class="lgx" id="lgx"></div><div class="mhint">⬇ Scroll down to see your lineup</div><div class="gl pn mlu" id="mlu"><h3>Your lineup <small id="mlt"></small></h3><div id="mp" class="pitch"></div><div class="mlist" id="ml"></div></div></div>`;
  $('#bb').onclick=()=>Net.send({type:'bid',pi:0});$('#pb').onclick=()=>Net.send({type:'pass',pi:0});
- $('#ff').onclick=()=>{if(confirm('Forfeit this match? You will not earn a reward.')){abort();location.hash='#/home'}};Game.round()};
+ $('#ff').onclick=()=>{const hm=!!(M&&(M.net||M.friend));if(confirm(hm?'Forfeit this match? It will count as a loss and your opponent wins.':'Forfeit this match? You will not earn a reward.')){if(hm)recLoss(M);abort();location.hash='#/home'}};Game.round()};
 V.results=()=>{if(!LAST){location.hash='#/play';return}const L=LAST,T=L.teams,w=T[0],me=T.find(t=>t.i==0);let tab='r';
  app.innerHTML=`<h2>Match results</h2><div class="tabs"><button class="chip on" data-t="r">Results</button><button class="chip" data-t="a">Analysis</button></div><div id="rb"></div>`;
  const R=()=>{$('#rb').innerHTML=`<div class="ban">${w.i==0?'YOU WIN!':w.p.name.toUpperCase()+' WINS'}</div>${T.map((t,k)=>`<div class="tr gl ${k==0?'w':''}" style="--k:${k}"><span class="md">${['🥇','🥈','🥉'][k]||'#'+(k+1)}</span><div><h4>${t.i==0?'You':t.p.name}</h4><small>${t.f} · ATT ${t.ev.atk} · MID ${t.ev.mid} · DEF ${t.ev.def} · GK ${t.ev.gk}<br>${t.p.won.length} players · +${t.coins} 🪙${t.i==0?' (yours)':''}</small></div><div class="ov">${t.ev.overall}<small>overall</small></div></div>`).join('')}
@@ -605,8 +606,7 @@ function frSnap(){const m=M,R=m.R;
 function frPush(){const m=M;if(!m||m.friend!='host'||!FR.room||!m.R)return;FR.room.presence({st:frSnap()}).catch(()=>{})}
 function frHostSync(){const m=M;if(!m||m.friend!='host'||!FR.room)return;const g=frPeers().find(p=>p.peer===FR.gp&&!p.isMe);
  if(!g){if(!FR.gone&&m.P[1].human)FR.gone=setTimeout(()=>{FR.gone=null;if(M!==m||frPeers().some(p=>p.peer===FR.gp&&!p.isMe))return;
-   m.P[1].human=false;m.P[1].pers=pick(PERS);toast('Friend left · AI took over');
-   if(m.R&&m.R.live&&m.R.turn==1&&m.R.active.includes(1))Net.send({type:Game.decide(1),pi:1})},6000);return}
+   m.P[1].human=false;FR.fin=true;walkover()},6000);return}
  clearTimeout(FR.gone);FR.gone=null;
  const a=g.presence.act;if(a&&typeof a.n=='number'&&a.n>FR.last){FR.last=a.n;
   if(m.P[1].human&&a.rd===m.round&&(a.t=='b'||a.t=='p'))Game.apply({type:a.t=='b'?'bid':'pass',pi:1})}}
@@ -652,7 +652,7 @@ function frGuestSnap(st,first){let old;
  try{old=frGuestApply(st)}catch{return false}
  if(!first&&$('#ps'))frGuestView(old);return true}
 function frGuestWatch(h,st){if(h&&st){clearTimeout(FR.gone);FR.gone=null;if(!FR.fin)frGuestSnap(st);return}
- if(!FR.gone&&!FR.fin)FR.gone=setTimeout(()=>{FR.gone=null;if(FR.fin||frOther('host'))return;toast('The host left the room');abort();location.hash='#/play'},8000)}
+ if(!FR.gone&&!FR.fin)FR.gone=setTimeout(()=>{FR.gone=null;if(FR.fin||frOther('host'))return;if(M&&M.friend=='guest'){FR.fin=true;clearInterval(FR.iv);walkover()}else{toast('The host left the room');abort();location.hash='#/play'}},8000)}
 function frGuestView(old,first){const m=M;if(!m||m.friend!='guest'||!m.R||!$('#ps'))return;const R=m.R;
  if(first||!old||!old.R||old.round!==m.round){$('#ch').innerHTML=card(R.card,{s:'--w:min(50vw,210px)'});$('#bid').textContent=R.bid;UI.paint();if(!R.live)UI.reveal(R.card);frTick();return}
  const a=JSON.stringify(m.lg[0]||null),b=JSON.stringify(old.lg[0]||null);
@@ -674,8 +674,16 @@ function frAct(a){const m=M,R=m.R;if(!R||!R.live||R.turn!==0||!FR.room)return;FR
  const h='<button class="mode gl" id="frm"><h3>👥 vs Friend</h3><p>25 coins · 8 rounds</p><small>Create a room code and play a private 1v1 with a friend.</small></button>';
  c?c.insertAdjacentHTML('afterend',h):$('.modes').insertAdjacentHTML('beforeend',h);$('#frm').onclick=frMenu}}
 
+/* ============ leaving an online match = loss for the leaver, win for whoever stays ============ */
+function recLoss(m){if(!m||!(m.net||m.friend)||!S.x.pend)return;const st=S.st,n=m.P.length;S.x.pend=null;st.l++;st.streak=0;
+ S.hist.unshift({mode:(m.cfg&&m.cfg.name||'Match')+' (left)',win:false,place:n,n,coins:0,t:Date.now()});S.hist=S.hist.slice(0,40);save()}
+function walkover(){const m=M;if(!m||m.walk||m.fin||(!m.net&&!m.friend))return;m.walk=true;clearInterval(m.iv);m.tm.forEach(clearTimeout);
+ m.P.forEach((p,i)=>{if(i>0&&!p.won)p.won=[]});toast('Opponent left · you win');Game.finish()}
+{const _vm=V.match;V.match=()=>{if(M&&(M.net||M.friend)&&!S.x.pend){S.x.pend={m:M.cfg.name,n:M.P.length,t:Date.now()};save()}return _vm()}}
+{const _res=V.results;V.results=()=>{_res();if(LAST&&LAST.walk){const b=$('.ban');if(b)b.insertAdjacentHTML('afterend','<p class="note" style="text-align:center;margin:6px 0 12px">Your opponent left the match, so you win by forfeit.</p>')}}}
+setTimeout(()=>{const p=S.x.pend;if(p&&!M){S.x.pend=null;const st=S.st;st.l++;st.streak=0;S.hist.unshift({mode:p.m+' (left)',win:false,place:p.n,n:p.n,coins:0,t:Date.now()});S.hist=S.hist.slice(0,40);save();try{toast('You left an online match · counted as a loss')}catch{}}},1200);
 /* ============ Online: 1v1 Online + Multiplayer vs real players (public matchmaking queue, host-authoritative, Firebase) ============ */
-MODES.full={name:'Full Squad',budget:60,rounds:0};const fullBudget=n=>(n>4?70:60)*n;REW.full={2:[120,40],3:[150,60,30],4:[180,80,50,30],5:[220,100,65,40,25],6:[260,120,80,55,35,25]};
+MODES.full={name:'Full Squad',budget:60,rounds:0};const FULLB={2:60,3:75,4:90,5:105,6:120},fullBudget=n=>FULLB[n]||60;REW.full={2:[120,40],3:[150,60,30],4:[180,80,50,30],5:[220,100,65,40,25],6:[260,120,80,55,35,25]};
 const FULLW={GK:1,LB:1,RB:1,CB:2,CDM:1,CM:1,CAM:1,LW:1,RW:1,ST:1};
 function makeDeck(n){const d=[],u=new Set();for(const po in FULLW)shuffle(PL.filter(p=>p.pos==po)).slice(0,FULLW[po]*n).forEach(p=>{d.push(p);u.add(p.id)});shuffle(PL.filter(p=>!u.has(p.id)&&p.pos=='GK')).slice(0,n).forEach(p=>d.push(p));
  /* guarantee at least 6 cards above Common (Rare/Epic/Legendary/Icon), swapped in at the same position so the deck stays balanced */
@@ -749,7 +757,7 @@ function olSnap(){const m=M,R=m.R;
 function olPush(){const m=M;if(!m||m.net!='host'||!OL.room||!m.R)return;OL.room.presence({st:olSnap()}).catch(()=>{})}
 function olHostSync(){const m=M;if(!m||m.net!='host'||!OL.room)return;
  m.P.forEach((p,i)=>{if(i==0||!p.human)return;const g=olPeers().find(x=>x.peer===p.pid&&!x.isMe);
-  if(!g){if(!OL.gone[p.pid])OL.gone[p.pid]=setTimeout(()=>{delete OL.gone[p.pid];if(M!==m||olPeers().some(x=>x.peer===p.pid))return;p.human=false;p.pers=pick(PERS);toast(p.name+' left · AI took over');if(m.R&&m.R.live&&m.R.turn==i&&m.R.active.includes(i))Net.send({type:Game.decide(i),pi:i})},6000);return}
+  if(!g){if(!OL.gone[p.pid])OL.gone[p.pid]=setTimeout(()=>{delete OL.gone[p.pid];if(M!==m||olPeers().some(x=>x.peer===p.pid))return;p.human=false;p.pers=pick(PERS);if(!m.P.some((q,j)=>j>0&&q.human)){walkover();return}toast(p.name+' left · AI took over');if(m.R&&m.R.live&&m.R.turn==i&&m.R.active.includes(i))Net.send({type:Game.decide(i),pi:i})},6000);return}
   clearTimeout(OL.gone[p.pid]);delete OL.gone[p.pid];
   const a=g.presence.act;if(a&&typeof a.n=='number'&&a.n>(OL.last[p.pid]||0)){OL.last[p.pid]=a.n;if(p.human&&a.rd===m.round&&(a.t=='b'||a.t=='p'))Game.apply({type:a.t=='b'?'bid':'pass',pi:i})}})}
 {const _p=UI.paint;UI.paint=function(){_p.apply(this,arguments);olPush()}}
@@ -787,7 +795,7 @@ function olGSnap(st,first){let old;if(st.ph=='lobby')return false;
  try{old=olApply(st)}catch{return false}
  if(!first&&$('#ps'))olGView(old);return true}
 function olWatch(h,st){if(h&&st){clearTimeout(OL.gone.h);OL.gone.h=null;if(!OL.fin)olGSnap(st);return}
- if(!OL.gone.h&&!OL.fin)OL.gone.h=setTimeout(()=>{OL.gone.h=null;if(OL.fin||olPeers().some(p=>p.peer===OL.hostId))return;toast('The host left the match');abort();location.hash='#/play'},8000)}
+ if(!OL.gone.h&&!OL.fin)OL.gone.h=setTimeout(()=>{OL.gone.h=null;if(OL.fin||olPeers().some(p=>p.peer===OL.hostId))return;if(M&&M.net=='guest'){OL.fin=true;clearInterval(OL.gi);walkover()}else{toast('The host left the match');abort();location.hash='#/play'}},8000)}
 function olGView(old,first){const m=M;if(!m||m.net!='guest'||!m.R||!$('#ps'))return;const R=m.R;
  if(first||!old||!old.R||old.round!==m.round){$('#ch').innerHTML=card(R.card,{s:'--w:min(50vw,210px)'});$('#bid').textContent=R.bid;UI.paint();if(!R.live)UI.reveal(R.card);olTick();return}
  const a=JSON.stringify(m.lg[0]||null),b=JSON.stringify(old.lg[0]||null);
